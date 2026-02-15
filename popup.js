@@ -15,13 +15,16 @@ const PERSONAS = [
   { id: "gamer",              label: "Gamer" },
 ];
 
-// ── DOM refs ───────────────────────────────────────────────────────────────────
+
 const personaSelect = document.getElementById("personaSelect");
 const btnGenerate   = document.getElementById("btnGenerate");
+const btnSubmit     = document.getElementById("btnSubmit");
 const queryList     = document.getElementById("queryList");
 const statusMsg     = document.getElementById("statusMsg");
 
-// ── Build dropdown ─────────────────────────────────────────────────────────────
+// [{ text: string, decision: 'pending'|'approved'|'denied' }]
+let queryState = [];
+
 function buildDropdown() {
   const placeholder = document.createElement("option");
   placeholder.value = "";
@@ -38,7 +41,6 @@ function buildDropdown() {
   });
 }
 
-// ── Fetch queries from Flask ───────────────────────────────────────────────────
 async function fetchQueries(personaId) {
   const res = await fetch(`${FLASK_BASE}/api/recommendations?persona_id=${personaId}`);
   if (!res.ok) {
@@ -49,18 +51,48 @@ async function fetchQueries(personaId) {
   return data.queries;
 }
 
-// ── Render query list (read-only) ──────────────────────────────────────────────
 function renderQueries(queries) {
+  queryState = queries.map(text => ({ text, decision: "pending" }));
+  drawRows();
+  btnSubmit.classList.add("hidden");
+}
+
+function drawRows() {
   queryList.innerHTML = "";
-  queries.forEach(q => {
+
+  queryState.forEach((q, i) => {
     const li = document.createElement("li");
-    li.className = "query-item";
-    li.textContent = q;
+    li.className = `query-item ${q.decision}`;
+
+    const span = document.createElement("span");
+    span.className = "query-text";
+    span.textContent = q.text;
+
+    const sel = document.createElement("select");
+    sel.className = "decision-select";
+    sel.innerHTML = `
+      <option value="pending"  ${q.decision === "pending"  ? "selected" : ""}>— decide —</option>
+      <option value="approved" ${q.decision === "approved" ? "selected" : ""}>✓ Approve</option>
+      <option value="denied"   ${q.decision === "denied"   ? "selected" : ""}>✕ Deny</option>
+    `;
+
+    sel.addEventListener("change", () => {
+      queryState[i].decision = sel.value;
+      li.className = `query-item ${sel.value}`;
+      updateSubmitVisibility();
+    });
+
+    li.appendChild(span);
+    li.appendChild(sel);
     queryList.appendChild(li);
   });
 }
 
-// ── Status helpers ─────────────────────────────────────────────────────────────
+function updateSubmitVisibility() {
+  const hasApproved = queryState.some(q => q.decision === "approved");
+  btnSubmit.classList.toggle("hidden", !hasApproved);
+}
+
 function setStatus(msg, type = "info") {
   statusMsg.textContent = msg;
   statusMsg.className = `status ${type}`;
@@ -71,7 +103,6 @@ function clearStatus() {
   statusMsg.className = "status";
 }
 
-// ── Generate button handler ────────────────────────────────────────────────────
 btnGenerate.addEventListener("click", async () => {
   const personaId = personaSelect.value;
 
@@ -83,6 +114,7 @@ btnGenerate.addEventListener("click", async () => {
   btnGenerate.disabled = true;
   btnGenerate.textContent = "Fetching...";
   queryList.innerHTML = "";
+  btnSubmit.classList.add("hidden");
   setStatus("Asking the model for queries...", "info");
 
   try {
@@ -97,5 +129,39 @@ btnGenerate.addEventListener("click", async () => {
   }
 });
 
-// ── Init ───────────────────────────────────────────────────────────────────────
+btnSubmit.addEventListener("click", async () => {
+  const approved = queryState
+    .filter(q => q.decision === "approved")
+    .map(q => q.text);
+
+  if (approved.length === 0) return;
+
+  btnSubmit.disabled = true;
+  btnSubmit.textContent = "Submitting...";
+  setStatus("Sending approved queries...", "info");
+
+  try {
+    const res = await fetch(`${FLASK_BASE}/api/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ queries: approved }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Server error ${res.status}`);
+    }
+
+    const data = await res.json();
+    setStatus(`✓ ${data.message}`, "info");
+    btnSubmit.classList.add("hidden");
+
+  } catch (e) {
+    setStatus(`Error: ${e.message}`, "error");
+  } finally {
+    btnSubmit.disabled = false;
+    btnSubmit.textContent = "Submit Approved";
+  }
+});
+
 buildDropdown();

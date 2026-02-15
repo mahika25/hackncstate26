@@ -4,9 +4,11 @@
   "version": "1.0.0",
   "description": "Enhance your online privacy by helping reduce targeted ad profiling and tracking.",
   "permissions": ["tabs", "storage"],
-  "host_permissions": ["https://www.google.com/*", "http://localhost:11434/*", "http://localhost:5000/*"],
+  "host_permissions": [
+    "https://www.google.com/*",
+    "http://localhost:11434/*",
+    "http://localhost:5000/*"
+  ],
   "action": {"default_popup": "popup.html"},
   "background": {"service_worker": "background.js"}
 }
-
-

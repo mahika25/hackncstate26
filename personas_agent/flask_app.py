@@ -26,7 +26,7 @@ def dispatcher_thread():
     and pushes it to all connected SSE clients.
     """
     while True:
-        wait = random.uniform(10, 60)
+        wait = random.uniform(2, 5)
         time.sleep(wait)
 
         with approved_lock:
