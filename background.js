@@ -1,10 +1,7 @@
 // Background Service Worker for Privacy Shield Extension
 
 const API_BASE_URL = 'http://localhost:5001';
-const SEARCH_ENGINES = {
-  google: 'https://www.google.com/search?q=',
-  bing: 'https://www.bing.com/search?q='
-};
+const GOOGLE_SEARCH_URL = 'https://www.google.com/search?q=';
 
 // State management
 let queryQueue = [];
@@ -21,7 +18,6 @@ chrome.runtime.onInstalled.addListener((details) => {
     selectedQueries: [],
     autoMode: false,
     settings: {
-      searchEngine: 'google',
       delayBetweenQueries: 3000,
       queriesPerSession: 10,
       autoModeInterval: 3600000 // 1 hour
@@ -83,7 +79,6 @@ async function handleExecuteQueries(queries) {
   
   const { settings } = await chrome.storage.local.get(['settings']);
   const delay = settings?.delayBetweenQueries || 3000;
-  const searchEngine = settings?.searchEngine || 'google';
   const shouldCloseTabs = settings?.closeTabs !== false;
   
   console.log(`Starting execution of ${queryQueue.length} queries`);
@@ -105,7 +100,7 @@ async function handleExecuteQueries(queries) {
     if (!isExecuting) break; // Stop if cancelled
     
     try {
-      await executeQuery(query, searchEngine);
+      await executeQuery(query);
       executedQueries.push({
         query: query,
         timestamp: Date.now(),
@@ -159,7 +154,7 @@ async function handleExecuteQueries(queries) {
 }
 
 async function executeQuery(query, searchEngine = 'google') {
-  const searchUrl = SEARCH_ENGINES[searchEngine] + encodeURIComponent(query);
+  const searchUrl = GOOGLE_SEARCH_URL + encodeURIComponent(query);
   
   return new Promise((resolve, reject) => {
     // Navigate the existing tab to the new search URL
