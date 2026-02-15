@@ -2,8 +2,6 @@
 
 let refreshTimer = null;
 
-// ── Init ───────────────────────────────────────────────────────────
-
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('exportBtn').addEventListener('click', exportData);
   document.getElementById('settingsBtn').addEventListener('click', openSettings);
@@ -14,8 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshTimer = setInterval(refresh, 3000);
 });
 
-// ── Main refresh ───────────────────────────────────────────────────
-
 async function refresh() {
   try {
     const data = await chrome.storage.local.get([
@@ -24,14 +20,12 @@ async function refresh() {
       'selectedQueries'
     ]);
 
-    // Also get live status from background
     let liveStatus = null;
     try {
       liveStatus = await chrome.runtime.sendMessage({ action: 'getStatus' });
-    } catch (e) { /* background may not be ready */ }
+    } catch (e) {}
 
-    const hasData = data.initialProfile || (data.personas && data.personas.length > 0) ||
-                    (data.executedQueries && data.executedQueries.length > 0);
+    const hasData = data.initialProfile || (data.personas && data.personas.length > 0) || (data.executedQueries && data.executedQueries.length > 0);
 
     if (!hasData) {
       showEmptyState();
@@ -46,7 +40,6 @@ async function refresh() {
     updateComparisonTable(data.profileComparison);
     updateRecommendation(data.profileComparison);
 
-    // Tick indicator
     const ind = document.getElementById('refreshIndicator');
     ind.textContent = `Updated ${new Date().toLocaleTimeString()}`;
   } catch (e) {
@@ -54,7 +47,6 @@ async function refresh() {
   }
 }
 
-// ── Execution Banner ───────────────────────────────────────────────
 
 function updateExecBanner(status, execState) {
   const banner = document.getElementById('execBanner');
@@ -98,8 +90,6 @@ function handleExecAction() {
   }
 }
 
-// ── Metrics ────────────────────────────────────────────────────────
-
 function updateMetrics(data, status) {
   const comparison = data.profileComparison;
   const obfScore = comparison?.obfuscation_score || 0;
@@ -115,8 +105,6 @@ function updateMetrics(data, status) {
   document.getElementById('metricExecuted').textContent = data.executedQueries?.length || 0;
   document.getElementById('metricPersonas').textContent = data.personas?.length || 0;
 }
-
-// ── Persona List ───────────────────────────────────────────────────
 
 function updatePersonaList(personas) {
   const container = document.getElementById('personaList');
@@ -139,7 +127,6 @@ function updatePersonaList(personas) {
     `;
   }).join('');
 
-  // Bind delete buttons
   container.querySelectorAll('.delete-persona-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const idx = parseInt(e.target.dataset.index);
@@ -172,13 +159,10 @@ async function addPersona() {
   }
 }
 
-// ── Timeline ───────────────────────────────────────────────────────
-
 function updateTimeline(executedQueries, personas) {
   const container = document.getElementById('timeline');
   const events = [];
 
-  // Persona creation events
   personas.forEach((p, i) => {
     if (p.created_at) {
       events.push({
@@ -188,7 +172,6 @@ function updateTimeline(executedQueries, personas) {
     }
   });
 
-  // Group executed queries by day
   const byDay = {};
   (executedQueries || []).forEach(q => {
     const d = new Date(q.timestamp);
@@ -222,8 +205,6 @@ function updateTimeline(executedQueries, personas) {
     </div>
   `).join('');
 }
-
-// ── Comparison Table ───────────────────────────────────────────────
 
 function updateComparisonTable(comparison) {
   const tbody = document.querySelector('#comparisonTable tbody');
@@ -264,8 +245,6 @@ function updateComparisonTable(comparison) {
   }).join('');
 }
 
-// ── Recommendation ─────────────────────────────────────────────────
-
 function updateRecommendation(comparison) {
   const box = document.getElementById('recommendationBox');
   const text = document.getElementById('recommendationText');
@@ -276,8 +255,6 @@ function updateRecommendation(comparison) {
   text.textContent = comparison.summary.recommendation;
   box.style.display = 'block';
 }
-
-// ── Helpers ─────────────────────────────────────────────────────────
 
 function formatTimeAgo(date) {
   const s = Math.floor((Date.now() - date) / 1000);

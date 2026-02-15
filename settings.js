@@ -1,5 +1,3 @@
-// Settings page JavaScript (extracted from inline script for CSP compliance)
-
 const DEFAULT_SETTINGS = {
   delayBetweenQueries: 3000,
   queriesPerSession: 10,
@@ -8,7 +6,6 @@ const DEFAULT_SETTINGS = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Load current settings
   const data = await chrome.storage.local.get(['settings']);
 
   if (data.settings) {
@@ -19,7 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('closeTabs').checked = settings.closeTabs !== false;
   }
 
-  // Bind buttons
   document.getElementById('cancelBtn').addEventListener('click', () => window.close());
   document.getElementById('saveBtn').addEventListener('click', saveSettings);
   document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
@@ -38,7 +34,6 @@ async function saveSettings() {
 
     showMessage('Settings saved successfully!', 'success');
 
-    // Notify background script
     chrome.runtime.sendMessage({ action: 'settingsUpdated', settings });
 
     setTimeout(() => {
@@ -59,7 +54,6 @@ async function clearAllData() {
   try {
     await chrome.storage.local.clear();
 
-    // Re-initialize default storage so the extension keeps working
     await chrome.storage.local.set({
       executedQueries: [],
       selectedQueries: [],

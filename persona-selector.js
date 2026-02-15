@@ -5,12 +5,10 @@ let selectedQueries = new Set();
 let filteredPersonas = [];
 let currentFilter = 'all';
 
-// DOM Elements
 let personasContainer, searchInput, filterButtons;
 let totalPersonas, totalQueries, selectedCount, footerCount;
 let confirmBtn, cancelBtn, emptyState;
 
-// Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   initializeElements();
   await loadPersonas();
@@ -47,7 +45,6 @@ async function loadPersonas() {
       selectedQueries = new Set(data.selectedQueries);
     }
     
-    // Generate filter categories
     generateFilterButtons();
     
   } catch (error) {
@@ -74,19 +71,15 @@ function generateFilterButtons() {
 }
 
 function setupEventListeners() {
-  // Search
   searchInput.addEventListener('input', handleSearch);
   
-  // Filter buttons
   filterButtons.addEventListener('click', (e) => {
     if (e.target.classList.contains('filter-btn')) {
       handleFilterChange(e.target);
     }
   });
 
-  // Delegated click handler for query items and checkboxes
   personasContainer.addEventListener('click', (e) => {
-    // Handle select-all / deselect-all button
     const selectBtn = e.target.closest('[data-action="toggle-select"]');
     if (selectBtn) {
       e.stopPropagation();
@@ -94,14 +87,12 @@ function setupEventListeners() {
       return;
     }
 
-    // Handle expand/collapse
     const expandTrigger = e.target.closest('[data-action="toggle-expand"]');
     if (expandTrigger) {
       togglePersonaExpansion(Number(expandTrigger.dataset.index));
       return;
     }
 
-    // Handle query item toggle
     const queryItem = e.target.closest('.query-item');
     if (!queryItem) return;
 
@@ -112,11 +103,9 @@ function setupEventListeners() {
     }
   });
   
-  // Footer buttons
   confirmBtn.addEventListener('click', confirmSelection);
   cancelBtn.addEventListener('click', () => window.close());
   
-  // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'a') {
       e.preventDefault();
@@ -217,7 +206,6 @@ function getQueryTags(query) {
   const tags = [];
   const lower = query.toLowerCase();
   
-  // Category detection
   if (lower.match(/buy|purchase|shop|price/)) tags.push('shopping');
   if (lower.match(/recipe|cook|food|restaurant/)) tags.push('food');
   if (lower.match(/travel|hotel|flight|vacation/)) tags.push('travel');
@@ -226,7 +214,7 @@ function getQueryTags(query) {
   if (lower.match(/health|fitness|medical|doctor/)) tags.push('health');
   if (lower.match(/news|politics|election/)) tags.push('news');
   
-  return tags.slice(0, 2); // Limit to 2 tags
+  return tags.slice(0, 2);
 }
 
 function togglePersonaExpansion(index) {
@@ -237,7 +225,6 @@ function togglePersonaExpansion(index) {
     card.classList.remove('expanded');
     queriesList.classList.remove('expanded');
   } else {
-    // Close all others
     document.querySelectorAll('.persona-card').forEach(c => {
       c.classList.remove('expanded');
     });
@@ -245,7 +232,6 @@ function togglePersonaExpansion(index) {
       q.classList.remove('expanded');
     });
     
-    // Open this one
     card.classList.add('expanded');
     queriesList.classList.add('expanded');
   }
@@ -256,10 +242,8 @@ function togglePersonaSelection(index) {
   const allSelected = persona.queries.every(q => selectedQueries.has(q));
   
   if (allSelected) {
-    // Deselect all
     persona.queries.forEach(q => selectedQueries.delete(q));
   } else {
-    // Select all
     persona.queries.forEach(q => selectedQueries.add(q));
   }
   
@@ -268,7 +252,6 @@ function togglePersonaSelection(index) {
 }
 
 window.toggleQuerySelection = function(queryId, personaIndex, queryIndex) {
-  // Look up the actual query string from the persona data (avoids HTML-escaping issues)
   const query = filteredPersonas[personaIndex]?.queries[queryIndex];
   if (!query) return;
 
@@ -295,11 +278,9 @@ function handleSearch(e) {
     filteredPersonas = filterByCategory(personas, currentFilter);
   } else {
     filteredPersonas = personas.filter(persona => {
-      // Search in persona title and description
       const titleMatch = (persona.title || '').toLowerCase().includes(searchTerm);
       const descMatch = (persona.description || '').toLowerCase().includes(searchTerm);
       
-      // Search in queries
       const queryMatch = persona.queries.some(q => 
         q.toLowerCase().includes(searchTerm)
       );
@@ -315,7 +296,6 @@ function handleSearch(e) {
 }
 
 function handleFilterChange(btn) {
-  // Update active state
   filterButtons.querySelectorAll('.filter-btn').forEach(b => {
     b.classList.remove('active');
   });
@@ -355,12 +335,10 @@ function updateStats() {
 
 async function confirmSelection() {
   try {
-    // Save selected queries to storage
     await chrome.storage.local.set({
       selectedQueries: Array.from(selectedQueries)
     });
     
-    // Notify popup
     chrome.runtime.sendMessage({
       action: 'queriesSelected',
       count: selectedQueries.size
@@ -380,6 +358,5 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Expose global functions
 window.togglePersonaExpansion = togglePersonaExpansion;
 window.togglePersonaSelection = togglePersonaSelection;

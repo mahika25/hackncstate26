@@ -72,8 +72,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return true;
 });
 
-// ── Query Execution ────────────────────────────────────────────────
-
 async function handleExecuteQueries(queries, isResume) {
   if (isExecuting) {
     console.log('Already executing');
@@ -107,7 +105,6 @@ async function handleExecuteQueries(queries, isResume) {
     executionState: { queue, currentIndex: startIndex, total }
   });
 
-  // Create reusable tab
   try {
     const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
     executionTabId = tab.id;
@@ -158,7 +155,6 @@ async function handleExecuteQueries(queries, isResume) {
   }
   executionTabId = null;
 
-  // Persist executed queries
   if (newExecuted.length > 0) {
     const { executedQueries: existing } = await chrome.storage.local.get(['executedQueries']);
     await chrome.storage.local.set({
@@ -171,7 +167,6 @@ async function handleExecuteQueries(queries, isResume) {
     await chrome.storage.local.set({ executionState: null });
   }
 
-  // After queries complete, re-analyze and compare profiles
 const { initialProfile, executedQueries: allQueries } = await chrome.storage.local.get(['initialProfile', 'executedQueries']);
 if (initialProfile && allQueries?.length > 0) {
   try {
@@ -265,7 +260,6 @@ function interruptableSleep(ms) {
   });
 }
 
-// ── Persona management ─────────────────────────────────────────────
 
 async function handleDeletePersona(personaIndex) {
   const { personas, selectedQueries } = await chrome.storage.local.get(['personas', 'selectedQueries']);
@@ -301,7 +295,6 @@ async function handleRegeneratePersona(profile) {
   }
 }
 
-// ── Persona selector window ────────────────────────────────────────
 
 function openPersonaSelector(personas) {
   chrome.storage.local.set({ tempPersonas: personas }, () => {
@@ -314,7 +307,6 @@ function openPersonaSelector(personas) {
   });
 }
 
-// ── Status ─────────────────────────────────────────────────────────
 
 async function getExecutionStatus() {
   const data = await chrome.storage.local.get([

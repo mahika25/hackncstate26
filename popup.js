@@ -14,13 +14,11 @@ let statusMessage, loading, loadingText;
 let uploadedHistory = null;
 let generatedPersonas = null;
 
-// ── Init ───────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   initElements();
   setupListeners();
 
-  // SESSION REFRESH: clear selected queries every time popup opens
   await chrome.storage.local.set({ selectedQueries: [] });
 
   await loadStoredData();
@@ -58,7 +56,6 @@ function initElements() {
 }
 
 function setupListeners() {
-  // File upload
   uploadArea.addEventListener('click', () => fileInput.click());
   uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
   uploadArea.addEventListener('dragleave', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); });
@@ -68,23 +65,19 @@ function setupListeners() {
   });
   fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
-  // Main actions
   analyzeBtn.addEventListener('click', analyzeSearchHistory);
   viewPersonasBtn.addEventListener('click', openPersonaSelector);
   executeQueriesBtn.addEventListener('click', executeSelectedQueries);
   stopBtn.addEventListener('click', stopExecution);
   resumeBtn.addEventListener('click', resumeExecution);
 
-  // Persona management
   addPersonaBtn.addEventListener('click', addNewPersona);
   deletePersonaBtn.addEventListener('click', deleteLastPersona);
 
-  // Navigation
   dashboardBtn.addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') }));
   settingsBtn.addEventListener('click', () => chrome.windows.create({ url: chrome.runtime.getURL('settings.html'), type: 'popup', width: 600, height: 700 }));
 }
 
-// ── Status Polling ─────────────────────────────────────────────────
 
 let pollTimer = null;
 
@@ -97,7 +90,6 @@ async function refreshStatus() {
     const status = await chrome.runtime.sendMessage({ action: 'getStatus' });
     updateUIFromStatus(status);
   } catch (e) {
-    // popup closing, ignore
   }
 }
 
@@ -106,13 +98,11 @@ function updateUIFromStatus(status) {
 
   const { isExecuting: running, executionState, totalExecuted } = status;
 
-  // Execution buttons
   if (running) {
     stopBtn.style.display = 'block';
     executeQueriesBtn.style.display = 'none';
     resumeBtn.style.display = 'none';
   } else if (executionState && executionState.currentIndex < executionState.total) {
-    // Paused mid-execution
     stopBtn.style.display = 'none';
     executeQueriesBtn.style.display = 'none';
     resumeBtn.style.display = 'block';
@@ -122,7 +112,6 @@ function updateUIFromStatus(status) {
     executeQueriesBtn.style.display = 'block';
   }
 
-  // Progress bar
   if (running && executionState) {
     progressSection.style.display = 'block';
     const pct = (executionState.currentIndex / executionState.total) * 100;
@@ -137,11 +126,9 @@ function updateUIFromStatus(status) {
     progressSection.style.display = 'none';
   }
 
-  // Stats
   queriesExecuted.textContent = totalExecuted;
 }
 
-// ── File handling ──────────────────────────────────────────────────
 
 function handleFile(file) {
   if (!file.name.endsWith('.json')) {
@@ -170,8 +157,6 @@ function formatSize(b) {
   if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
   return (b / 1048576).toFixed(1) + ' MB';
 }
-
-// ── API: analyze → generate ────────────────────────────────────────
 
 async function analyzeSearchHistory() {
   if (!uploadedHistory) return showStatus('Upload a file first', 'error');
@@ -254,8 +239,6 @@ function parseSearchHistory(data) {
   return searches.filter(s => s.query && s.query.trim().length > 0);
 }
 
-// ── Persona selector ───────────────────────────────────────────────
-
 async function openPersonaSelector() {
   await chrome.storage.local.set({ tempPersonas: generatedPersonas });
   chrome.windows.create({
@@ -265,8 +248,6 @@ async function openPersonaSelector() {
     top: Math.round((screen.availHeight - 700) / 2)
   });
 }
-
-// ── Execution controls ─────────────────────────────────────────────
 
 async function executeSelectedQueries() {
   const { selectedQueries: stored } = await chrome.storage.local.get(['selectedQueries']);
@@ -287,8 +268,6 @@ function resumeExecution() {
   chrome.runtime.sendMessage({ action: 'resumeExecution' });
   showStatus('Resuming...', 'info');
 }
-
-// ── Persona management ─────────────────────────────────────────────
 
 async function addNewPersona() {
   const { initialProfile } = await chrome.storage.local.get(['initialProfile']);
@@ -322,8 +301,6 @@ async function deleteLastPersona() {
   }
 }
 
-// ── UI helpers ─────────────────────────────────────────────────────
-
 function showStatus(msg, type) {
   statusMessage.textContent = msg;
   statusMessage.className = `status ${type}`;
@@ -336,8 +313,6 @@ function showLoading(show, text) {
   loading.style.display = show ? 'block' : 'none';
   if (text) loadingText.textContent = text;
 }
-
-// ── Load stored state on open ──────────────────────────────────────
 
 async function loadStoredData() {
   const data = await chrome.storage.local.get([
@@ -361,14 +336,11 @@ async function loadStoredData() {
     statsCard.style.display = 'block';
   }
 
-  // Check for selected queries (from a previous persona-selector confirm)
   const { selectedQueries } = await chrome.storage.local.get(['selectedQueries']);
   if (selectedQueries && selectedQueries.length > 0) {
     executeQueriesBtn.disabled = false;
   }
 }
-
-// ── Listen for messages ────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.action === 'queriesComplete') {
