@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Shield Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Download chart.min.js into lib/ — see lib/README.md -->
+  <script src="lib/chart.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -359,9 +360,9 @@
     <div class="navbar-content">
       <div class="logo">🛡️ Privacy Shield Dashboard</div>
       <div class="nav-actions">
-        <button onclick="refreshData()">🔄 Refresh</button>
-        <button onclick="exportData()">📥 Export Data</button>
-        <button onclick="openSettings()">⚙️ Settings</button>
+        <button id="refreshBtn">🔄 Refresh</button>
+        <button id="exportBtn">📥 Export Data</button>
+        <button id="settingsNavBtn">⚙️ Settings</button>
       </div>
     </div>
   </div>
@@ -407,7 +408,7 @@
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">📈 Demographic Comparison</h2>
-          <button class="card-action" onclick="viewDetails()">View Details</button>
+          <button class="card-action" id="viewDetailsBtn">View Details</button>
         </div>
         
         <table class="comparison-table" id="comparisonTable">
@@ -470,7 +471,7 @@
       <div class="empty-icon">📊</div>
       <h2>No Data Available</h2>
       <p style="margin: 20px 0;">Upload your search history and generate personas to see analytics here.</p>
-      <button class="btn btn-primary" onclick="openExtension()">Get Started</button>
+      <button class="btn btn-primary" id="getStartedBtn">Get Started</button>
     </div>
   </div>
 

@@ -7,7 +7,9 @@
     "storage",
     "tabs",
     "alarms",
-    "webRequest"
+    "webRequest",
+    "contextMenus",
+    "notifications"
   ],
   "host_permissions": [
     "https://www.google.com/*",
@@ -32,7 +34,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["dashboard.html", "icons/*"],
+      "resources": ["dashboard.html", "icons/*", "lib/*"],
       "matches": ["<all_urls>"]
     }
   ]

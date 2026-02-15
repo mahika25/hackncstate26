@@ -5,7 +5,14 @@ NOW WITH WORKING PERSONA GENERATION! ✨
 """
 
 from flask import Flask, jsonify, request, Response
-from flask_cors import CORS 
+from flask_cors import CORS
+
+import os
+import sys
+
+# Ensure sibling modules are importable regardless of cwd
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from personas_agent import PersonaSearchRecommender
 import threading
 import random
@@ -129,6 +136,26 @@ class ProfileAnalyzer:
         self.searches = searches
         self.queries = [s['query'].lower() for s in searches]
         self.all_text = ' '.join(self.queries)
+
+    @staticmethod
+    def _normalize_timestamp(ts) -> float:
+        """Convert a timestamp to a numeric epoch-ms value.
+        
+        Handles:
+          - int / float (already epoch-ms)
+          - ISO-8601 date strings (e.g. Google Takeout's 'time' field)
+          - Falls back to 0 on failure
+        """
+        if isinstance(ts, (int, float)):
+            return float(ts)
+        if isinstance(ts, str):
+            try:
+                from dateutil.parser import parse as parse_dt
+                dt = parse_dt(ts)
+                return dt.timestamp() * 1000  # convert seconds → ms
+            except (ValueError, ImportError):
+                pass
+        return 0.0
         
     def analyze(self) -> Dict[str, Any]:
         """Perform complete profile analysis"""
@@ -238,7 +265,10 @@ class ProfileAnalyzer:
     def _analyze_temporal(self) -> Dict[str, Any]:
         if not self.searches or 'timestamp' not in self.searches[0]:
             return {'available': False}
-        timestamps = [s.get('timestamp', 0) for s in self.searches]
+        timestamps = [self._normalize_timestamp(s.get('timestamp', 0)) for s in self.searches]
+        timestamps = [t for t in timestamps if t > 0]
+        if len(timestamps) < 2:
+            return {'available': False}
         return {
             'available': True,
             'earliest': min(timestamps),
@@ -262,7 +292,10 @@ class ProfileAnalyzer:
     def _get_timespan(self) -> str:
         if not self.searches or 'timestamp' not in self.searches[0]:
             return 'unknown'
-        timestamps = [s.get('timestamp', 0) for s in self.searches]
+        timestamps = [self._normalize_timestamp(s.get('timestamp', 0)) for s in self.searches]
+        timestamps = [t for t in timestamps if t > 0]
+        if len(timestamps) < 2:
+            return 'unknown'
         span_days = (max(timestamps) - min(timestamps)) / (1000 * 60 * 60 * 24)
         if span_days < 7:
             return f'{int(span_days)} days'

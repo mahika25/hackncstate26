@@ -6,6 +6,14 @@ let interestsChart = null;
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('Dashboard loading...');
+
+  // Bind navigation buttons
+  document.getElementById('refreshBtn').addEventListener('click', refreshData);
+  document.getElementById('exportBtn').addEventListener('click', exportData);
+  document.getElementById('settingsNavBtn').addEventListener('click', openSettings);
+  document.getElementById('viewDetailsBtn').addEventListener('click', viewDetails);
+  document.getElementById('getStartedBtn').addEventListener('click', openExtension);
+
   await loadDashboardData();
 });
 

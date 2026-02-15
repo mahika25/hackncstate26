@@ -520,7 +520,12 @@ async function loadStoredData() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'queriesComplete') {
     showStatus(`Completed ${message.count} queries`, 'success');
-    updateStats(message.stats);
+    // Update the executed count directly; obfuscation score comes from profile comparison
+    chrome.storage.local.get(['executedQueries'], (data) => {
+      queriesExecuted.textContent = data.executedQueries?.length || 0;
+    });
+    executeQueriesBtn.disabled = false;
+    showLoading(false);
   }
   
   if (message.action === 'queryProgress') {

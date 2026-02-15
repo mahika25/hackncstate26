@@ -140,6 +140,8 @@ async function handleExecuteQueries(queries) {
 
 async function executeQuery(query, searchEngine = 'google') {
   const searchUrl = SEARCH_ENGINES[searchEngine] + encodeURIComponent(query);
+  const { settings } = await chrome.storage.local.get(['settings']);
+  const shouldCloseTabs = settings?.closeTabs !== false;
   
   return new Promise((resolve, reject) => {
     // Create a new tab for the search
@@ -151,25 +153,37 @@ async function executeQuery(query, searchEngine = 'google') {
         reject(chrome.runtime.lastError);
         return;
       }
+
+      let settled = false;
       
-      // Wait for page to load, then close
-      chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+      function listener(tabId, info) {
         if (tabId === tab.id && info.status === 'complete') {
+          if (settled) return;
+          settled = true;
           chrome.tabs.onUpdated.removeListener(listener);
           
           // Keep tab open for a few seconds to simulate real browsing
           setTimeout(() => {
-            chrome.tabs.remove(tab.id).catch(err => {
-              console.log('Tab already closed:', err);
-            });
+            if (shouldCloseTabs) {
+              chrome.tabs.remove(tab.id).catch(err => {
+                console.log('Tab already closed:', err);
+              });
+            }
             resolve();
           }, 2000);
         }
-      });
+      }
+
+      chrome.tabs.onUpdated.addListener(listener);
       
-      // Safety timeout
+      // Safety timeout — also clean up the listener
       setTimeout(() => {
-        chrome.tabs.remove(tab.id).catch(() => {});
+        if (settled) return;
+        settled = true;
+        chrome.tabs.onUpdated.removeListener(listener);
+        if (shouldCloseTabs) {
+          chrome.tabs.remove(tab.id).catch(() => {});
+        }
         resolve();
       }, 15000);
     });
@@ -215,32 +229,15 @@ async function handleAutoModeToggle(enabled) {
 }
 
 async function startAutoMode() {
-  console.log('Starting auto mode');
-  
   const { settings } = await chrome.storage.local.get(['settings']);
-  const interval = settings?.autoModeInterval || 3600000; // 1 hour default
-  
-  // Clear existing interval
-  if (autoModeInterval) {
-    clearInterval(autoModeInterval);
-  }
-  
-  // Execute immediately
-  await executeAutoQueries();
-  
-  // Schedule periodic execution
-  autoModeInterval = setInterval(async () => {
-    await executeAutoQueries();
-  }, interval);
+  const intervalMinutes = (settings?.autoModeInterval || 3600000) / 60000;
+
+  chrome.alarms.create('autoMode', { periodInMinutes: intervalMinutes });
+  await executeAutoQueries(); // run immediately
 }
 
 function stopAutoMode() {
-  console.log('Stopping auto mode');
-  
-  if (autoModeInterval) {
-    clearInterval(autoModeInterval);
-    autoModeInterval = null;
-  }
+  chrome.alarms.clear('autoMode');
 }
 
 async function executeAutoQueries() {
@@ -266,11 +263,8 @@ async function executeAutoQueries() {
 
 // Alarm handling for periodic tasks
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === 'periodicCheck') {
-    console.log('Periodic check triggered');
-    
+  if (alarm.name === 'periodicCheck' || alarm.name === 'autoMode') {
     const { autoMode } = await chrome.storage.local.get(['autoMode']);
-    
     if (autoMode && !isExecuting) {
       await executeAutoQueries();
     }

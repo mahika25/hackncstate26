@@ -1,5 +1,11 @@
-from utils import query_ollama
+import os
+import sys
 import json
+
+# Ensure sibling modules are importable regardless of cwd
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from utils import query_ollama
 
 PERSONAS = [
     { "id": "outdoor_enthusiast", "label": "Outdoor Enthusiast", "description": "hiking, camping, backpacking, trail running, climbing, national parks, gear reviews" },

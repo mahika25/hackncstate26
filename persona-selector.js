@@ -83,6 +83,34 @@ function setupEventListeners() {
       handleFilterChange(e.target);
     }
   });
+
+  // Delegated click handler for query items and checkboxes
+  personasContainer.addEventListener('click', (e) => {
+    // Handle select-all / deselect-all button
+    const selectBtn = e.target.closest('[data-action="toggle-select"]');
+    if (selectBtn) {
+      e.stopPropagation();
+      togglePersonaSelection(Number(selectBtn.dataset.index));
+      return;
+    }
+
+    // Handle expand/collapse
+    const expandTrigger = e.target.closest('[data-action="toggle-expand"]');
+    if (expandTrigger) {
+      togglePersonaExpansion(Number(expandTrigger.dataset.index));
+      return;
+    }
+
+    // Handle query item toggle
+    const queryItem = e.target.closest('.query-item');
+    if (!queryItem) return;
+
+    const { queryId, personaIndex, queryIndex } = queryItem.dataset;
+    if (queryId != null) {
+      e.preventDefault();
+      toggleQuerySelection(queryId, Number(personaIndex), Number(queryIndex));
+    }
+  });
   
   // Footer buttons
   confirmBtn.addEventListener('click', confirmSelection);
@@ -125,7 +153,7 @@ function createPersonaCard(persona, index) {
   const allSelected = selectedInPersona === persona.queries.length;
   
   card.innerHTML = `
-    <div class="persona-header" onclick="togglePersonaExpansion(${index})">
+    <div class="persona-header" data-action="toggle-expand" data-index="${index}">
       <div class="persona-info">
         <div class="persona-title">
           ${persona.title || `Persona ${index + 1}`}
@@ -144,11 +172,12 @@ function createPersonaCard(persona, index) {
       <div class="persona-controls">
         <button 
           class="select-all-btn" 
-          onclick="event.stopPropagation(); togglePersonaSelection(${index})"
+          data-action="toggle-select"
+          data-index="${index}"
         >
           ${allSelected ? 'Deselect All' : 'Select All'}
         </button>
-        <button class="expand-btn">
+        <button class="expand-btn" data-action="toggle-expand" data-index="${index}">
           View Queries
         </button>
       </div>
@@ -167,15 +196,14 @@ function createQueryItem(query, personaIndex, queryIndex) {
   
   return `
     <div class="query-item ${isSelected ? 'selected' : ''}" 
-         data-query="${escapeHtml(query)}"
-         onclick="toggleQuerySelection('${queryId}', '${escapeHtml(query)}')">
+         data-query-id="${queryId}"
+         data-persona-index="${personaIndex}"
+         data-query-index="${queryIndex}">
       <input 
         type="checkbox" 
         class="query-checkbox" 
         id="${queryId}"
         ${isSelected ? 'checked' : ''}
-        onclick="event.stopPropagation()"
-        onchange="toggleQuerySelection('${queryId}', '${escapeHtml(query)}')"
       >
       <span class="query-text">${escapeHtml(query)}</span>
       <div class="query-tags">
@@ -239,18 +267,22 @@ function togglePersonaSelection(index) {
   updateStats();
 }
 
-window.toggleQuerySelection = function(queryId, query) {
+window.toggleQuerySelection = function(queryId, personaIndex, queryIndex) {
+  // Look up the actual query string from the persona data (avoids HTML-escaping issues)
+  const query = filteredPersonas[personaIndex]?.queries[queryIndex];
+  if (!query) return;
+
   const checkbox = document.getElementById(queryId);
-  const queryItem = checkbox.closest('.query-item');
+  const queryItem = checkbox ? checkbox.closest('.query-item') : null;
   
   if (selectedQueries.has(query)) {
     selectedQueries.delete(query);
-    queryItem.classList.remove('selected');
-    checkbox.checked = false;
+    if (queryItem) queryItem.classList.remove('selected');
+    if (checkbox) checkbox.checked = false;
   } else {
     selectedQueries.add(query);
-    queryItem.classList.add('selected');
-    checkbox.checked = true;
+    if (queryItem) queryItem.classList.add('selected');
+    if (checkbox) checkbox.checked = true;
   }
   
   updateStats();
@@ -350,3 +382,4 @@ function escapeHtml(text) {
 
 // Expose global functions
 window.togglePersonaExpansion = togglePersonaExpansion;
+window.togglePersonaSelection = togglePersonaSelection;
