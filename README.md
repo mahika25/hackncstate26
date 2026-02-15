@@ -23,7 +23,7 @@ Upload your Google search history and see exactly what algorithms infer about yo
 The system automatically creates 3-5 personas with opposite characteristics. If you're identified as a 25-year-old male software engineer, personas might include a 55-year-old female teacher, a retired artist, or a college biology student. Each persona gets 15-50 realistic queries.
 
 ### Automated Execution
-Select personas to activate and blurB handles the rest. Queries execute in background tabs with customizable delays, batch sizes, and scheduling. You can pause, resume, or stop anytime.
+"Select personas to activate and blurB handles the rest. Queries execute by automatically opening new tabs in your browser, one at a time with customizable delays between each search (default 3 seconds). You can pause, resume, or stop anytime while the tabs open and execute searches."
 
 ### Protection Dashboard
 Real-time dashboard showing your protection score (0-100%), before/after demographic comparisons, confidence level changes, and activity timeline. When you see "Unknown" in current demographics, the system can no longer profile you - that's success.
