@@ -174,6 +174,32 @@ async function handleExecuteQueries(queries, isResume) {
     await chrome.storage.local.set({ executionState: null });
   }
 
+  // After queries complete, re-analyze and compare profiles
+const { initialProfile, executedQueries: allQueries } = await chrome.storage.local.get(['initialProfile', 'executedQueries']);
+if (initialProfile && allQueries?.length > 0) {
+  try {
+    const updatedSearches = allQueries.map(q => ({ query: q.query, timestamp: q.timestamp }));
+    
+    const analyzeResp = await fetch(`${API_BASE_URL}/api/analyze-profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searches: updatedSearches })
+    });
+    const { profile: updatedProfile } = await analyzeResp.json();
+
+    const compareResp = await fetch(`${API_BASE_URL}/api/compare-profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initialProfile, updatedProfile })
+    });
+    const { comparison } = await compareResp.json();
+
+    await chrome.storage.local.set({ updatedProfile, profileComparison: comparison });
+  } catch (e) {
+    console.error('Profile comparison failed:', e);
+  }
+}
+
   isExecuting = false;
   stopRequested = false;
 

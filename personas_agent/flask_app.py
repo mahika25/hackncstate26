@@ -680,13 +680,6 @@ def home():
 if __name__ == "__main__":
     print("🛡️  Privacy Shield Backend Server (INTEGRATED + FIXED)")
     print("=" * 60)
-    print("Starting Flask server with:")
-    print("  ✅ Existing PersonaSearchRecommender (Ollama-powered)")
-    print("  ✅ SSE query dispatch")
-    print("  ✅ NEW: Profile analysis")
-    print("  ✅ NEW: Inverse persona selection")
-    print("  ✅ NEW: Real query generation using YOUR recommender!")
-    print("  ✅ NEW: Profile comparison")
     print("API available at: http://localhost:5001")
     print("=" * 60)
     
