@@ -1,191 +1,184 @@
-# 🛡️ blurB - Profile Obfuscation Extension
+# blurB - Profile Protection Extension
 
-A Chrome extension that protects your digital footprint by generating and executing inverse search patterns to obfuscate your online profile.
+A Chrome extension that protects your digital privacy by making your online profile unreliable through strategic noise injection.
 
-## 📋 Overview
+## The Problem
 
-blurB analyzes your search history to create a profile, then generates inverse personas with opposing characteristics. By executing these inverse search queries, it obscures the accuracy of any profile that advertisers or data brokers might build about you.
+Every search you make contributes to a detailed profile that data brokers build and sell. These profiles include your age, gender, income level, political views, health concerns, and personal interests. This data is used to manipulate prices, filter job opportunities, calculate insurance premiums, and target you with ads.
 
-## 🌟 Features
+Traditional privacy tools like VPNs and ad blockers don't solve this because they don't address behavioral profiling. Even in incognito mode, your search patterns still build a profile of who you are.
 
-### ✅ Completed Features
+## Our Solution
 
-1. **Profile Analysis**
-   - Upload search history JSON
-   - Demographic inference (age, gender, profession, marital status)
-   - Interest categorization
-   - Confidence scoring
+blurB takes a different approach. Instead of hiding your searches, we add strategic noise by injecting contradictory queries. When your digital footprint contains searches from a college student, a retiree, a parent, and a professional all at once, the profile becomes unreliable and worthless.
 
-2. **Inverse Persona Generation**
-   - Generate 3+ contrasting personas
-   - Automatic query generation (15-50 queries per persona)
-   - Smart category-based query creation
+Data brokers rely on consistency to build confidence. When they see searches about both retirement planning AND college admissions, luxury travel AND budget camping, their algorithms can't determine which signals are real. Confidence scores drop and the data becomes unprofitable.
 
-3. **Query Execution System**
-   - Visual persona selector interface
-   - Batch query execution
-   - Background processing
-   - Progress tracking
+## Core Features
 
-4. **Profile Comparison Dashboard**
-   - Before/after demographic comparison
-   - Confidence delta calculations
-   - Interest diversity tracking
-   - Obfuscation effectiveness score
-   - Interactive charts and visualizations
+### Profile Analysis
+Upload your Google search history and see exactly what algorithms infer about you - age range, gender, profession, marital status, and interests. Each inference includes a confidence score showing how certain the system is.
 
-5. **Auto Mode**
-   - Scheduled automatic query execution
-   - Customizable intervals
-   - Background operation
+### Inverse Persona Generation
+The system automatically creates 3-5 personas with opposite characteristics. If you're identified as a 25-year-old male software engineer, personas might include a 55-year-old female teacher, a retired artist, or a college biology student. Each persona gets 15-50 realistic queries.
 
-## 🏗️ Architecture
+### Automated Execution
+Select personas to activate and blurB handles the rest. Queries execute in background tabs with customizable delays, batch sizes, and scheduling. You can pause, resume, or stop anytime.
 
-### Frontend (Chrome Extension)
-```
-├── manifest.json          # Extension configuration
-├── popup.html            # Main UI
-├── popup.js              # UI logic
-├── background.js         # Service worker
-├── persona-selector.html # Persona selection UI
-├── persona-selector.js   # Selection logic
-├── dashboard.html        # Analytics dashboard
-└── dashboard.js          # Dashboard logic
-```
+### Protection Dashboard
+Real-time dashboard showing your protection score (0-100%), before/after demographic comparisons, confidence level changes, and activity timeline. When you see "Unknown" in current demographics, the system can no longer profile you - that's success.
 
-### Backend (Python Flask)
-```
-├── server.py             # Flask API server
-├── requirements.txt      # Python dependencies
-└── personas_agent/       # (Your existing code)
-```
-
-## 🚀 Installation & Setup
-
-### Prerequisites
-- Python 3.8+
-- Chrome Browser
-- pip (Python package manager)
+## Installation
 
 ### Backend Setup
-
-1. **Install Python dependencies:**
 ```bash
 pip install -r requirements.txt
-```
-
-2. **Start the Flask server:**
-```bash
 python server.py
 ```
-
-The server will start on `http://localhost:5000`
+Server runs on http://localhost:5000
 
 ### Extension Setup
+1. Open chrome://extensions/
+2. Enable "Developer mode"
+3. Click "Load unpacked" and select project directory
+4. blurB icon appears in toolbar
 
-1. **Open Chrome Extensions page:**
-   - Navigate to `chrome://extensions/`
-   - Enable "Developer mode" (toggle in top right)
+## Usage
 
-2. **Load the extension:**
-   - Click "Load unpacked"
-   - Select the project directory
+### Step 1: Get Your Search History
+1. Go to https://takeout.google.com/
+2. Select only "My Activity" then "Search"
+3. Choose JSON format and download
 
-3. **Verify installation:**
-   - Extension icon should appear in toolbar
-   - Click icon to open popup
+### Step 2: Analyze Your Profile
+1. Click blurB extension icon
+2. Upload your JSON file
+3. Click "Analyze & Generate Profile"
+4. Review your inferred demographics and generated personas
 
-## 📖 Usage Guide
+### Step 3: Select and Execute
+1. Click "Select Queries to Execute"
+2. Browse personas and check boxes for ones to activate
+3. Click "Confirm Selection"
+4. Click "Execute Selected Queries"
+5. Queries run automatically in background
 
-### Step 1: Upload Search History
+### Step 4: Monitor Protection
+Open the dashboard to see your protection score, confidence changes, and which demographics are now "Unknown". The more unknowns, the better protected you are.
 
-1. Export your Google search history:
-   - Go to [Google Takeout](https://takeout.google.com/)
-   - Select "My Activity" → "Search"
-   - Download as JSON
+## Architecture
 
-2. In the extension popup:
-   - Click the upload area
-   - Select your downloaded JSON file
-   - Click "Analyze & Generate Profile"
+### Extension Components
 
-### Step 2: Select Queries
+**manifest.json** - Defines permissions (tabs, storage, alarms) and extension configuration
 
-1. After analysis completes:
-   - Click "Select Queries to Execute"
-   - Browse generated personas
-   - Click "View Queries" to expand each persona
-   - Select queries you want to execute
-   - Click "Confirm Selection"
+**popup.html/js** - Main UI for file upload, profile display, and execution control
 
-### Step 3: Execute Queries
+**background.js** - Service worker managing query execution, scheduling, and data persistence in Chrome local storage
 
-1. In the popup:
-   - Click "Execute Selected Queries"
-   - Queries will run in background tabs
-   - Monitor progress in the popup
+**persona-selector.html/js** - Visual interface for reviewing and selecting which personas to activate
 
-### Step 4: View Results
+**dashboard.html/js** - Analytics showing protection metrics, demographic changes, and timeline (auto-refreshes every 3 seconds)
 
-1. Click "📈 Dashboard" to see:
-   - Obfuscation score
-   - Demographic confidence changes
-   - Interest distribution
-   - Activity timeline
+### Backend Components
 
-## 🔧 Configuration
+**server.py** - Flask API with three endpoints:
+- /api/analyze-profile - Processes search history, generates demographic inferences
+- /api/generate-personas - Creates inverse personas with contradicting characteristics  
+- /api/compare-profiles - Calculates protection metrics by comparing profiles
 
-### Extension Settings
+**personas_agent/** - Core logic for profile analysis and persona generation using keyword matching and pattern recognition
 
-Access via popup → ⚙️ Settings:
+### Data Flow
+User uploads history → Backend analyzes → Returns profile + personas → User selects personas → Extension stores locally → Background worker executes queries → User uploads new history → Backend compares → Returns protection metrics → Dashboard displays
 
-- **Search Engine:** Google or Bing
-- **Query Delay:** Time between queries (default: 3 seconds)
-- **Queries Per Session:** Batch size (default: 10)
-- **Auto Mode Interval:** Frequency for automatic execution
+## Design Decisions
 
-### Backend Configuration
+### Local Backend
+We use a local Flask server instead of cloud services to ensure no user data ever leaves their machine. Complete transparency and zero trust requirements, though it adds setup complexity.
 
-Edit `server.py`:
+### Real Search Engines
+Queries execute on Google (not simulated) because real searches create real data in real profiles. Simulated traffic would be detectable and filtered. We can verify effectiveness by re-analyzing history.
 
+### Rule-Based Analysis
+Profile analysis uses pattern matching rather than ML models for transparency, speed on consumer hardware, and explainability. Users can understand exactly what's being detected.
+
+### Manual Persona Selection
+Users choose which personas to activate for transparency (see exactly what will be searched), control (avoid inappropriate queries), and customization (pick personas that make sense).
+
+## Configuration
+
+In extension popup:
+- Query Delay: Seconds between searches (default: 3)
+- Queries Per Session: Batch size (default: 10)
+- Auto Mode Interval: Scheduled execution frequency
+
+In server.py:
 ```python
 PERSONA_COUNT = 3  # Number of personas to generate
-CONFIDENCE_THRESHOLD = 0.6  # Minimum confidence for demographic inference
+MIN_QUERIES_PER_PERSONA = 15
+MAX_QUERIES_PER_PERSONA = 50
+CONFIDENCE_THRESHOLD = 0.6  # Minimum confidence to show inference
 ```
 
-## 📊 API Endpoints
+## Understanding Protection Metrics
 
-### `POST /api/analyze-profile`
-Analyze search history and generate user profile.
+**Protection Score (0-100%)**: Overall profile degradation measure
+- 0-25%: Minimal protection, add more queries
+- 25-50%: Moderate protection, profile unclear
+- 50-75%: Good protection, significant uncertainty
+- 75-100%: Excellent protection, highly unreliable
 
-**Request:**
+**Confidence Changes**: For each attribute shows initial confidence, current confidence, and delta. Negative delta is good, positive means add more queries.
+
+**Unknown Demographics**: When current shows "Unknown", the system cannot confidently determine that attribute. This is the goal - being unprofitable.
+
+## Privacy & Security
+
+**Data that leaves your machine:**
+- Search history sent to localhost:5000 only
+- Search queries sent to Google when executing
+
+**Data that stays local:**
+- All profile data
+- All persona data  
+- All execution history
+- All settings
+
+**What we collect:** Nothing. No analytics, tracking, or telemetry.
+
+**Open Source:** All code is visible and auditable.
+
+## API Reference
+
+### POST /api/analyze-profile
+Analyzes search history and generates demographic profile.
+
+Request:
 ```json
 {
   "searches": [
-    {
-      "query": "best programming tutorials",
-      "timestamp": 1234567890
-    }
+    {"query": "python tutorial", "timestamp": 1234567890}
   ]
 }
 ```
 
-**Response:**
+Response:
 ```json
 {
   "success": true,
   "profile": {
-    "demographics": {...},
-    "interests": {...},
-    "behavior": {...}
+    "demographics": {"age_range": "24-35", "gender": "male"},
+    "interests": {"technology": 0.85},
+    "confidence_scores": {"age_range": 0.78}
   }
 }
 ```
 
-### `POST /api/generate-personas`
-Generate inverse personas based on profile.
+### POST /api/generate-personas
+Creates inverse personas based on profile.
 
-**Request:**
+Request:
 ```json
 {
   "profile": {...},
@@ -193,25 +186,25 @@ Generate inverse personas based on profile.
 }
 ```
 
-**Response:**
+Response:
 ```json
 {
   "success": true,
   "personas": [
     {
       "id": "persona_1",
-      "title": "...",
-      "demographics": {...},
-      "queries": [...]
+      "title": "Retired Artist",
+      "demographics": {"age_range": "55-65", "gender": "female"},
+      "queries": ["watercolor techniques for beginners", ...]
     }
   ]
 }
 ```
 
-### `POST /api/compare-profiles`
-Compare initial and updated profiles.
+### POST /api/compare-profiles
+Compares initial and updated profiles to calculate protection metrics.
 
-**Request:**
+Request:
 ```json
 {
   "initialProfile": {...},
@@ -219,150 +212,22 @@ Compare initial and updated profiles.
 }
 ```
 
-**Response:**
+Response:
 ```json
 {
   "success": true,
   "comparison": {
-    "demographic_changes": {...},
-    "confidence_deltas": {...},
-    "obfuscation_score": 45.67
+    "demographic_changes": {
+      "age_range": {"initial": "24-35", "updated": "Unknown"}
+    },
+    "confidence_deltas": {
+      "age_range": {"initial_confidence": 0.78, "updated_confidence": 0.15, "delta": -0.63}
+    },
+    "protection_score": 67.5
   }
 }
 ```
 
-## 🎯 How It Works
+## License
 
-### Profile Analysis
-
-The system analyzes search queries using keyword matching and pattern recognition to infer:
-
-- **Age Range:** Based on terms like "college", "retirement", "kids"
-- **Gender:** Based on terms like "men's", "women's", "maternity"
-- **Profession:** Based on industry-specific keywords
-- **Marital Status:** Based on relationship terms
-- **Interests:** Categorized into 12+ categories
-
-### Persona Generation
-
-For each demographic attribute, the system:
-
-1. Identifies the user's inferred value
-2. Selects an opposite value from available options
-3. Generates queries that would be typical for that persona
-4. Combines demographic and interest-based queries
-
-### Query Generation
-
-Queries are generated using templates:
-
-- Demographic-based: `"best X for age_range"`
-- Interest-based: `"how to get started with category"`
-- Behavioral: `"category for profession professionals"`
-
-### Obfuscation Scoring
-
-Score calculated based on:
-
-- Reduction in demographic confidence scores
-- Increase in interest diversity
-- Number of new category appearances
-
-Formula:
-```
-Obfuscation Score = (Confidence Reduction + Interest Diversification) / 2 × 100
-```
-
-## 🔒 Privacy & Security
-
-- **No data sent to external servers** (except your chosen backend)
-- **No tracking or analytics**
-- **All data stored locally** in browser storage
-- **Open source** - inspect all code
-- **Backend runs locally** on your machine
-
-## 🐛 Troubleshooting
-
-### Backend Won't Start
-
-```bash
-# Check if port 5000 is available
-lsof -i :5000
-
-# Try a different port
-# Edit server.py, change: app.run(port=5001)
-# Edit popup.js, change: API_BASE_URL = 'http://localhost:5001'
-```
-
-### Extension Not Loading
-
-1. Check Chrome console for errors:
-   - Right-click extension icon → "Inspect popup"
-   - Look for red error messages
-
-2. Verify manifest.json is valid:
-   ```bash
-   # Use JSON validator
-   python -m json.tool manifest.json
-   ```
-
-### Queries Not Executing
-
-1. Check background service worker:
-   - Go to `chrome://extensions/`
-   - Click "Inspect views: service worker"
-   - Look for errors in console
-
-2. Verify permissions in manifest.json:
-   - `tabs`, `storage`, `alarms` should all be present
-
-### Dashboard Shows No Data
-
-1. Open browser console (F12)
-2. Check if data exists:
-   ```javascript
-   chrome.storage.local.get(null, console.log)
-   ```
-3. Verify queries have been executed
-4. Try refreshing dashboard
-
-## 📈 Future Enhancements
-
-- [ ] Machine learning-based profile analysis
-- [ ] More sophisticated persona generation
-- [ ] Integration with more search engines
-- [ ] Cloud sync (optional)
-- [ ] Team/family accounts
-- [ ] Custom persona templates
-- [ ] Advanced scheduling options
-- [ ] Export reports as PDF
-
-## 🤝 Contributing
-
-This project was created for HackNC State 2026. Contributions welcome!
-
-## 📄 License
-
-MIT License - feel free to use and modify
-
-## 👥 Team
-
-Mahika (mahika25) - HackNC State 2026
-
-## 🙏 Acknowledgments
-
-- Chrome Extension documentation
-- Flask framework
-- Chart.js for visualizations
-- Google Takeout for data export
-
-## 📞 Support
-
-For issues or questions:
-- Open an issue on GitHub
-- Check troubleshooting section above
-- Review code comments for implementation details
-
----
-
-**Note:** This tool is for privacy protection and research purposes. Use responsibly and in accordance with search engine terms of service.
+MIT License - Created for HackNC State 2026
