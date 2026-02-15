@@ -1,16 +1,14 @@
-// Background Service Worker for Privacy Shield Extension
+// Background Service Worker for blurB Extension
 
 const API_BASE_URL = 'http://localhost:5001';
 const GOOGLE_SEARCH_URL = 'https://www.google.com/search?q=';
 
-// ── State ──────────────────────────────────────────────────────────
 let isExecuting = false;
 let stopRequested = false;
 let executionTabId = null;
 
-// ── Install ────────────────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Privacy Shield installed');
+  console.log('blurB installed');
   chrome.storage.local.set({
     executedQueries: [],
     selectedQueries: [],
@@ -24,12 +22,11 @@ chrome.runtime.onInstalled.addListener(() => {
   });
   chrome.contextMenus.create({
     id: 'addToPersona',
-    title: 'Add to Privacy Shield',
+    title: 'Add to blurB',
     contexts: ['selection']
   });
 });
 
-// ── Message router ─────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   switch (msg.action) {
 
@@ -333,8 +330,6 @@ async function getExecutionStatus() {
   };
 }
 
-// ── Context menu ───────────────────────────────────────────────────
-
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === 'addToPersona' && info.selectionText) {
     const { selectedQueries } = await chrome.storage.local.get(['selectedQueries']);
@@ -343,7 +338,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     });
     chrome.notifications.create({
       type: 'basic', iconUrl: 'icons/icon48.png',
-      title: 'Privacy Shield', message: 'Query added to selection'
+      title: 'blurB', message: 'Query added to selection'
     });
   }
 });
@@ -352,4 +347,4 @@ chrome.runtime.onSuspend.addListener(() => {
   stopQueryExecution();
 });
 
-console.log('Privacy Shield background service worker loaded');
+console.log('blurB background service worker loaded');

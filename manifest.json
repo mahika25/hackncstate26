@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Privacy Shield - Profile Obfuscation",
+  "name": "blurB",
   "version": "2.0.0",
   "description": "Protect your digital footprint by generating inverse search patterns",
   "permissions": [
