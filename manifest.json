@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "blurB",
+  "version": "1.0.0",
+  "description": "Enhance your online privacy by helping reduce targeted ad profiling and tracking.",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": ["https://www.google.com/*"],
+  "action": {"default_popup": "popup.html"},
+  "background": {"service_worker": "background.js"}
+}
