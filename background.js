@@ -68,6 +68,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+// Reusable tab for query execution
+let executionTabId = null;
+
 // Query execution
 async function handleExecuteQueries(queries) {
   if (isExecuting) {
@@ -81,11 +84,22 @@ async function handleExecuteQueries(queries) {
   const { settings } = await chrome.storage.local.get(['settings']);
   const delay = settings?.delayBetweenQueries || 3000;
   const searchEngine = settings?.searchEngine || 'google';
+  const shouldCloseTabs = settings?.closeTabs !== false;
   
   console.log(`Starting execution of ${queryQueue.length} queries`);
   
   let completed = 0;
   const executedQueries = [];
+
+  // Create a single background tab to reuse for all queries
+  try {
+    const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
+    executionTabId = tab.id;
+  } catch (err) {
+    console.error('Failed to create execution tab:', err);
+    isExecuting = false;
+    return;
+  }
   
   for (const query of queryQueue) {
     if (!isExecuting) break; // Stop if cancelled
@@ -105,7 +119,7 @@ async function handleExecuteQueries(queries) {
         action: 'queryProgress',
         current: completed,
         total: queryQueue.length
-      });
+      }).catch(() => {}); // popup may be closed
       
       // Wait between queries
       if (completed < queryQueue.length) {
@@ -115,6 +129,12 @@ async function handleExecuteQueries(queries) {
     } catch (error) {
       console.error('Query execution error:', error);
     }
+  }
+  
+  // Close the reusable tab when done
+  if (executionTabId !== null && shouldCloseTabs) {
+    chrome.tabs.remove(executionTabId).catch(() => {});
+    executionTabId = null;
   }
   
   // Store executed queries
@@ -133,22 +153,17 @@ async function handleExecuteQueries(queries) {
       executed: completed,
       failed: queryQueue.length - completed
     }
-  });
+  }).catch(() => {}); // popup may be closed
   
   console.log(`Completed ${completed} of ${queryQueue.length} queries`);
 }
 
 async function executeQuery(query, searchEngine = 'google') {
   const searchUrl = SEARCH_ENGINES[searchEngine] + encodeURIComponent(query);
-  const { settings } = await chrome.storage.local.get(['settings']);
-  const shouldCloseTabs = settings?.closeTabs !== false;
   
   return new Promise((resolve, reject) => {
-    // Create a new tab for the search
-    chrome.tabs.create({
-      url: searchUrl,
-      active: false // Open in background
-    }, (tab) => {
+    // Navigate the existing tab to the new search URL
+    chrome.tabs.update(executionTabId, { url: searchUrl }, (tab) => {
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError);
         return;
@@ -157,18 +172,13 @@ async function executeQuery(query, searchEngine = 'google') {
       let settled = false;
       
       function listener(tabId, info) {
-        if (tabId === tab.id && info.status === 'complete') {
+        if (tabId === executionTabId && info.status === 'complete') {
           if (settled) return;
           settled = true;
           chrome.tabs.onUpdated.removeListener(listener);
           
-          // Keep tab open for a few seconds to simulate real browsing
+          // Keep page loaded for a few seconds to simulate real browsing
           setTimeout(() => {
-            if (shouldCloseTabs) {
-              chrome.tabs.remove(tab.id).catch(err => {
-                console.log('Tab already closed:', err);
-              });
-            }
             resolve();
           }, 2000);
         }
@@ -176,14 +186,11 @@ async function executeQuery(query, searchEngine = 'google') {
 
       chrome.tabs.onUpdated.addListener(listener);
       
-      // Safety timeout — also clean up the listener
+      // Safety timeout
       setTimeout(() => {
         if (settled) return;
         settled = true;
         chrome.tabs.onUpdated.removeListener(listener);
-        if (shouldCloseTabs) {
-          chrome.tabs.remove(tab.id).catch(() => {});
-        }
         resolve();
       }, 15000);
     });
@@ -193,6 +200,10 @@ async function executeQuery(query, searchEngine = 'google') {
 function stopQueryExecution() {
   isExecuting = false;
   queryQueue = [];
+  if (executionTabId !== null) {
+    chrome.tabs.remove(executionTabId).catch(() => {});
+    executionTabId = null;
+  }
   console.log('Query execution stopped');
 }
 
