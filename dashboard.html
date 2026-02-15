@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Shield Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+    }
+
+    .navbar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .navbar-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .nav-actions button {
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-left: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .nav-actions button:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 40px;
+    }
+
+    .header {
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #6c757d;
+      font-size: 16px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .metric-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      transform: translateY(-4px);
+    }
+
+    .metric-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .metric-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 8px;
+    }
+
+    .metric-label {
+      font-size: 14px;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-change {
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .metric-change.positive {
+      color: #48bb78;
+    }
+
+    .metric-change.negative {
+      color: #f56565;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .card-action {
+      padding: 8px 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .card-action:hover {
+      background: #5568d3;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .comparison-table th {
+      text-align: left;
+      padding: 12px;
+      background: #f8f9fa;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6c757d;
+    }
+
+    .comparison-table td {
+      padding: 12px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .confidence-bar {
+      height: 8px;
+      background: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s ease;
+    }
+
+    .delta {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .delta.positive {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+
+    .delta.negative {
+      background: #fed7d7;
+      color: #742a2a;
+    }
+
+    .delta.neutral {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin: 20px 0;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 30px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e9ecef;
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -35px;
+      top: 6px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #667eea;
+      border: 3px solid white;
+      box-shadow: 0 0 0 3px #e9ecef;
+    }
+
+    .timeline-content {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .timeline-time {
+      font-size: 12px;
+      color: #6c757d;
+      margin-bottom: 4px;
+    }
+
+    .timeline-text {
+      font-size: 14px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6c757d;
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .recommendation-box {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+
+    .recommendation-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .recommendation-text {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.95;
+    }
+
+    @media (max-width: 1024px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 20px;
+      }
+      
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="navbar-content">
+      <div class="logo">🛡️ Privacy Shield Dashboard</div>
+      <div class="nav-actions">
+        <button onclick="refreshData()">🔄 Refresh</button>
+        <button onclick="exportData()">📥 Export Data</button>
+        <button onclick="openSettings()">⚙️ Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <h1>Profile Analysis & Comparison</h1>
+      <p class="subtitle">Track how your digital footprint changes over time</p>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid" id="metricsGrid">
+      <div class="metric-card">
+        <div class="metric-icon">🎯</div>
+        <div class="metric-value" id="obfuscationScore">--</div>
+        <div class="metric-label">Obfuscation Score</div>
+        <div class="metric-change positive" id="scoreChange">--</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-icon">🔍</div>
+        <div class="metric-value" id="queriesExecuted">--</div>
+        <div class="metric-label">Queries Executed</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-icon">🎭</div>
+        <div class="metric-value" id="personasGenerated">--</div>
+        <div class="metric-label">Personas Generated</div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-icon">📊</div>
+        <div class="metric-value" id="interestDiversity">--</div>
+        <div class="metric-label">Interest Diversity</div>
+        <div class="metric-change positive" id="diversityChange">--</div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+      <!-- Profile Comparison -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📈 Demographic Comparison</h2>
+          <button class="card-action" onclick="viewDetails()">View Details</button>
+        </div>
+        
+        <table class="comparison-table" id="comparisonTable">
+          <thead>
+            <tr>
+              <th>Attribute</th>
+              <th>Initial</th>
+              <th>Current</th>
+              <th>Confidence Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+
+        <div class="recommendation-box" id="recommendationBox" style="display: none;">
+          <div class="recommendation-title">💡 Recommendation</div>
+          <div class="recommendation-text" id="recommendationText"></div>
+        </div>
+      </div>
+
+      <!-- Activity Timeline -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🕒 Activity Timeline</h2>
+        </div>
+        
+        <div class="timeline" id="timeline">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="content-grid">
+      <!-- Confidence Changes Chart -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📉 Confidence Score Changes</h2>
+        </div>
+        <div class="chart-container">
+          <canvas id="confidenceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Interests Changes -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🎨 Interest Distribution</h2>
+        </div>
+        <div class="chart-container">
+          <canvas id="interestsChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state card" style="display: none;">
+      <div class="empty-icon">📊</div>
+      <h2>No Data Available</h2>
+      <p style="margin: 20px 0;">Upload your search history and generate personas to see analytics here.</p>
+      <button class="btn btn-primary" onclick="openExtension()">Get Started</button>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

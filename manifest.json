@@ -1,14 +1,39 @@
 {
   "manifest_version": 3,
-  "name": "blurB",
-  "version": "1.0.0",
-  "description": "Enhance your online privacy by helping reduce targeted ad profiling and tracking.",
-  "permissions": ["tabs", "storage"],
+  "name": "Privacy Shield - Profile Obfuscation",
+  "version": "2.0.0",
+  "description": "Protect your digital footprint by generating inverse search patterns",
+  "permissions": [
+    "storage",
+    "tabs",
+    "alarms",
+    "webRequest"
+  ],
   "host_permissions": [
     "https://www.google.com/*",
-    "http://localhost:11434/*",
-    "http://localhost:5000/*"
+    "https://www.bing.com/*",
+    "http://localhost:5001/*",
+    "http://127.0.0.1:5001/*"
   ],
-  "action": {"default_popup": "popup.html"},
-  "background": {"service_worker": "background.js"}
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["dashboard.html", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

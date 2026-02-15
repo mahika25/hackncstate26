@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Select Queries - Privacy Shield</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      padding: 30px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      opacity: 0.9;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      padding: 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: #6c757d;
+      margin-top: 5px;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .persona-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .persona-card.expanded {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+
+    .persona-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .persona-info {
+      flex: 1;
+    }
+
+    .persona-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .persona-description {
+      font-size: 14px;
+      color: #6c757d;
+      line-height: 1.5;
+    }
+
+    .persona-meta {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .meta-item {
+      font-size: 12px;
+      color: #6c757d;
+      background: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    .persona-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .expand-btn {
+      padding: 8px 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .expand-btn:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .select-all-btn {
+      padding: 6px 12px;
+      background: white;
+      border: 2px solid #667eea;
+      color: #667eea;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .select-all-btn:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .queries-list {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      margin-top: 20px;
+    }
+
+    .queries-list.expanded {
+      max-height: 800px;
+      overflow-y: auto;
+    }
+
+    .query-item {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .query-item:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transform: translateX(4px);
+    }
+
+    .query-item.selected {
+      background: #e7f3ff;
+      border-left: 4px solid #667eea;
+    }
+
+    .query-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      margin-right: 12px;
+      accent-color: #667eea;
+    }
+
+    .query-text {
+      flex: 1;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .query-tags {
+      display: flex;
+      gap: 6px;
+    }
+
+    .query-tag {
+      font-size: 11px;
+      padding: 3px 8px;
+      background: #667eea;
+      color: white;
+      border-radius: 10px;
+    }
+
+    .footer {
+      padding: 20px 30px;
+      background: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .selection-summary {
+      font-size: 14px;
+      color: #6c757d;
+    }
+
+    .selection-count {
+      font-weight: 700;
+      color: #667eea;
+      font-size: 18px;
+    }
+
+    .footer-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-secondary {
+      background: #e9ecef;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #dee2e6;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary:disabled {
+      background: #ced4da;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .search-box {
+      margin-bottom: 20px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .filter-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 8px 16px;
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .filter-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6c757d;
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎭 Select Queries to Execute</h1>
+      <p class="subtitle">Choose which queries will help obfuscate your digital profile</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="totalPersonas">0</div>
+        <div class="stat-label">Personas</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="totalQueries">0</div>
+        <div class="stat-label">Total Queries</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="selectedCount">0</div>
+        <div class="stat-label">Selected</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="search-box">
+        <input 
+          type="text" 
+          id="searchInput" 
+          class="search-input" 
+          placeholder="🔍 Search queries..."
+        >
+      </div>
+
+      <div class="filter-buttons" id="filterButtons">
+        <button class="filter-btn active" data-filter="all">All</button>
+      </div>
+
+      <div id="personasContainer"></div>
+
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-icon">🔍</div>
+        <p>No queries found. Try adjusting your search.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="selection-summary">
+        <span class="selection-count" id="footerCount">0</span> queries selected
+      </div>
+      <div class="footer-buttons">
+        <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="confirmBtn" disabled>Confirm Selection</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="persona-selector.js"></script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Shield Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 30px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .setting-group {
+      margin-bottom: 30px;
+    }
+
+    .setting-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .setting-description {
+      font-size: 13px;
+      color: #6c757d;
+      margin-bottom: 12px;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+    }
+
+    select:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #667eea;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #e9ecef;
+    }
+
+    button {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-save {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-save:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .btn-cancel {
+      background: #e9ecef;
+      color: #333;
+    }
+
+    .btn-cancel:hover {
+      background: #dee2e6;
+    }
+
+    .btn-reset {
+      background: #f56565;
+      color: white;
+    }
+
+    .btn-reset:hover {
+      background: #e53e3e;
+    }
+
+    .status-message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status-message.success {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+
+    .status-message.error {
+      background: #fed7d7;
+      color: #742a2a;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e9ecef;
+      margin: 30px 0;
+    }
+
+    .danger-zone {
+      background: #fff5f5;
+      border: 2px solid #feb2b2;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+
+    .danger-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #c53030;
+      margin-bottom: 10px;
+    }
+
+    .danger-description {
+      font-size: 13px;
+      color: #742a2a;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚙️ Settings</h1>
+      <p>Configure Privacy Shield behavior</p>
+    </div>
+
+    <div class="content">
+      <div id="statusMessage" class="status-message"></div>
+
+      <div class="setting-group">
+        <label class="setting-label" for="searchEngine">Search Engine</label>
+        <p class="setting-description">Choose which search engine to use for query execution</p>
+        <select id="searchEngine">
+          <option value="google">Google</option>
+          <option value="bing">Bing</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label" for="queryDelay">Delay Between Queries (seconds)</label>
+        <p class="setting-description">Time to wait between executing queries to appear more natural</p>
+        <input type="number" id="queryDelay" min="1" max="60" value="3">
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label" for="queriesPerSession">Queries Per Session</label>
+        <p class="setting-description">Maximum number of queries to execute in one session</p>
+        <input type="number" id="queriesPerSession" min="1" max="50" value="10">
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label" for="autoModeInterval">Auto Mode Interval (hours)</label>
+        <p class="setting-description">How often to automatically execute queries when Auto Mode is enabled</p>
+        <input type="number" id="autoModeInterval" min="1" max="24" value="1">
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="setting-group">
+        <label class="setting-label">Notifications</label>
+        <p class="setting-description">Show notifications when queries complete</p>
+        <label class="toggle-switch">
+          <input type="checkbox" id="notifications" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">Close Tabs After Search</label>
+        <p class="setting-description">Automatically close search tabs after loading</p>
+        <label class="toggle-switch">
+          <input type="checkbox" id="closeTabs" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-cancel" onclick="window.close()">Cancel</button>
+        <button class="btn-save" onclick="saveSettings()">Save Settings</button>
+      </div>
+
+      <div class="danger-zone">
+        <div class="danger-title">⚠️ Danger Zone</div>
+        <div class="danger-description">
+          These actions are permanent and cannot be undone.
+        </div>
+        <button class="btn-reset" onclick="clearAllData()">Clear All Data</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Load current settings
+    document.addEventListener('DOMContentLoaded', async () => {
+      const data = await chrome.storage.local.get(['settings']);
+      
+      if (data.settings) {
+        const settings = data.settings;
+        document.getElementById('searchEngine').value = settings.searchEngine || 'google';
+        document.getElementById('queryDelay').value = (settings.delayBetweenQueries || 3000) / 1000;
+        document.getElementById('queriesPerSession').value = settings.queriesPerSession || 10;
+        document.getElementById('autoModeInterval').value = (settings.autoModeInterval || 3600000) / 3600000;
+        document.getElementById('notifications').checked = settings.notifications !== false;
+        document.getElementById('closeTabs').checked = settings.closeTabs !== false;
+      }
+    });
+
+    async function saveSettings() {
+      try {
+        const settings = {
+          searchEngine: document.getElementById('searchEngine').value,
+          delayBetweenQueries: parseInt(document.getElementById('queryDelay').value) * 1000,
+          queriesPerSession: parseInt(document.getElementById('queriesPerSession').value),
+          autoModeInterval: parseInt(document.getElementById('autoModeInterval').value) * 3600000,
+          notifications: document.getElementById('notifications').checked,
+          closeTabs: document.getElementById('closeTabs').checked
+        };
+
+        await chrome.storage.local.set({ settings });
+
+        showMessage('Settings saved successfully!', 'success');
+
+        // Notify background script
+        chrome.runtime.sendMessage({ action: 'settingsUpdated', settings });
+
+        setTimeout(() => {
+          window.close();
+        }, 1500);
+
+      } catch (error) {
+        console.error('Error saving settings:', error);
+        showMessage('Failed to save settings', 'error');
+      }
+    }
+
+    async function clearAllData() {
+      if (!confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+        return;
+      }
+
+      try {
+        await chrome.storage.local.clear();
+        showMessage('All data cleared successfully', 'success');
+        
+        setTimeout(() => {
+          window.close();
+        }, 1500);
+
+      } catch (error) {
+        console.error('Error clearing data:', error);
+        showMessage('Failed to clear data', 'error');
+      }
+    }
+
+    function showMessage(text, type) {
+      const message = document.getElementById('statusMessage');
+      message.textContent = text;
+      message.className = `status-message ${type}`;
+      message.style.display = 'block';
+
+      setTimeout(() => {
+        message.style.display = 'none';
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

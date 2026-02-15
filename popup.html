@@ -1,32 +1,291 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>blurB</title>
-  <link rel="stylesheet" href="popup.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Shield</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 400px;
+      min-height: 500px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .upload-area {
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 10px;
+    }
+
+    .upload-area:hover {
+      border-color: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .upload-area.dragover {
+      border-color: #fff;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .upload-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .upload-text {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .file-info {
+      font-size: 12px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 10px;
+    }
+
+    .btn-primary {
+      background: #fff;
+      color: #667eea;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status {
+      font-size: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .status.success {
+      background: rgba(72, 187, 120, 0.3);
+      border: 1px solid rgba(72, 187, 120, 0.5);
+    }
+
+    .status.error {
+      background: rgba(245, 101, 101, 0.3);
+      border: 1px solid rgba(245, 101, 101, 0.5);
+    }
+
+    .status.info {
+      background: rgba(66, 153, 225, 0.3);
+      border: 1px solid rgba(66, 153, 225, 0.5);
+    }
+
+    .persona-status {
+      font-size: 13px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .persona-count {
+      font-weight: 600;
+      color: #ffd700;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffd700;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+  </style>
 </head>
 <body>
+  <div class="header">
+    <h1>🛡️ Privacy Shield</h1>
+    <p class="subtitle">Protect your digital footprint</p>
+  </div>
 
-  <header>
-    <h1>blurB</h1>
-    <p class="subtitle">Generate noise queries to blur your ad profile</p>
-  </header>
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>Processing...</p>
+  </div>
 
-  <main>
-    <label for="personaSelect">Persona</label>
-    <select id="personaSelect"></select>
+  <div id="statusMessage" class="status"></div>
 
-    <button id="btnGenerate">Generate Queries</button>
+  <div class="card">
+    <div class="section-title">📁 Upload Search History</div>
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📤</div>
+      <div class="upload-text">
+        Click or drag JSON file here<br>
+        <small>(Google Takeout format supported)</small>
+      </div>
+      <input type="file" id="fileInput" accept=".json">
+    </div>
+    <div class="file-info" id="fileInfo"></div>
+    <button class="btn-primary" id="analyzeBtn" disabled>Analyze & Generate Profile</button>
+  </div>
 
-    <p id="statusMsg" class="status"></p>
+  <div class="card" id="personaCard" style="display: none;">
+    <div class="section-title">🎭 Generated Personas</div>
+    <div class="persona-status" id="personaStatus"></div>
+    <button class="btn-primary" id="viewPersonasBtn">Select Queries to Execute</button>
+    <button class="btn-secondary" id="executeQueriesBtn" disabled>Execute Selected Queries</button>
+  </div>
 
-    <ul id="queryList"></ul>
+  <div class="card" id="statsCard" style="display: none;">
+    <div class="section-title">📊 Current Status</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="queriesExecuted">0</div>
+        <div class="stat-label">Queries Executed</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="profileScore">0%</div>
+        <div class="stat-label">Obfuscation</div>
+      </div>
+    </div>
+  </div>
 
-    <button id="btnSubmit" class="hidden">Submit Approved</button>
-  </main>
+  <div class="card">
+    <div class="section-title">⚡ Quick Actions</div>
+    <div class="quick-actions">
+      <button class="btn-secondary" id="dashboardBtn">
+        📈 Dashboard
+      </button>
+      <button class="btn-secondary" id="settingsBtn">
+        ⚙️ Settings
+      </button>
+    </div>
+    <button class="btn-secondary" id="startAutoBtn" style="margin-top: 10px;">
+      🤖 Start Auto Mode
+    </button>
+  </div>
 
   <script src="popup.js"></script>
-
 </body>
 </html>
