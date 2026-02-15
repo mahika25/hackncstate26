@@ -139,7 +139,6 @@
     .delta.negative { background: #fed7d7; color: #742a2a; }
     .delta.neutral { background: #e2e8f0; color: #4a5568; }
 
-    /* ── Recommendation ── */
     .recommendation-box {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #fff; padding: 20px; border-radius: 12px; margin-top: 20px;
@@ -177,7 +176,6 @@
 
   <div class="container">
 
-    <!-- Execution Banner -->
     <div class="exec-banner idle" id="execBanner">
       <span id="execLabel">Running...</span>
       <div class="progress-bar"><div class="progress-fill" id="execProgress"></div></div>
@@ -185,7 +183,6 @@
       <button id="execAction" class="btn-stop">Stop</button>
     </div>
 
-    <!-- Metrics -->
     <div class="metrics-grid" id="metricsGrid">
       <div class="metric-card">
         <div class="metric-icon">🎯</div>
@@ -205,10 +202,8 @@
       </div>
     </div>
 
-    <!-- Main Grid -->
     <div class="content-grid">
 
-      <!-- Persona Management -->
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">🎭 Personas</h2>
@@ -219,7 +214,6 @@
         </div>
       </div>
 
-      <!-- Activity Timeline -->
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">🕒 Recent Activity</h2>
@@ -248,17 +242,6 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">📉 Confidence Changes</h2>
-        </div>
-        <div class="chart-container">
-          <canvas id="confidenceChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Empty State (shown when no data) -->
     <div id="emptyState" class="empty-state card" style="display:none;">
       <div class="empty-icon">📊</div>
       <h2>No Data Available</h2>

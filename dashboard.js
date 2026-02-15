@@ -1,6 +1,5 @@
 // Dashboard JavaScript — auto-refreshes every 3 seconds
 
-let confidenceChart = null;
 let refreshTimer = null;
 
 // ── Init ───────────────────────────────────────────────────────────
@@ -45,7 +44,6 @@ async function refresh() {
     updatePersonaList(data.personas || []);
     updateTimeline(data.executedQueries || [], data.personas || []);
     updateComparisonTable(data.profileComparison);
-    updateChart(data.profileComparison);
     updateRecommendation(data.profileComparison);
 
     // Tick indicator
@@ -264,50 +262,6 @@ function updateComparisonTable(comparison) {
       <td><span class="delta ${cls}">${sign}${Math.round(Math.abs(delta) * 100)}%</span></td>
     </tr>`;
   }).join('');
-}
-
-// ── Chart ──────────────────────────────────────────────────────────
-
-function updateChart(comparison) {
-  if (!comparison?.confidence_deltas) return;
-  if (typeof Chart === 'undefined') return; // Chart.js not loaded
-
-  const ctx = document.getElementById('confidenceChart');
-  if (!ctx) return;
-
-  const labels = [];
-  const initial = [];
-  const updated = [];
-
-  for (const [key, val] of Object.entries(comparison.confidence_deltas)) {
-    labels.push(key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()));
-    initial.push(Math.round(val.initial_confidence * 100));
-    updated.push(Math.round(val.updated_confidence * 100));
-  }
-
-  if (confidenceChart) confidenceChart.destroy();
-
-  confidenceChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Initial', data: initial,
-          backgroundColor: 'rgba(102,126,234,0.6)', borderColor: 'rgba(102,126,234,1)', borderWidth: 2
-        },
-        {
-          label: 'Current', data: updated,
-          backgroundColor: 'rgba(118,75,162,0.6)', borderColor: 'rgba(118,75,162,1)', borderWidth: 2
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
-      plugins: { legend: { position: 'top' } }
-    }
-  });
 }
 
 // ── Recommendation ─────────────────────────────────────────────────
