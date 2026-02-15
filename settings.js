@@ -1,10 +1,8 @@
 // Settings page JavaScript (extracted from inline script for CSP compliance)
 
 const DEFAULT_SETTINGS = {
-  searchEngine: 'google',
   delayBetweenQueries: 3000,
   queriesPerSession: 10,
-  autoModeInterval: 3600000,
   notifications: true,
   closeTabs: true
 };
@@ -15,10 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (data.settings) {
     const settings = data.settings;
-    document.getElementById('searchEngine').value = settings.searchEngine || 'google';
     document.getElementById('queryDelay').value = (settings.delayBetweenQueries || 3000) / 1000;
     document.getElementById('queriesPerSession').value = settings.queriesPerSession || 10;
-    document.getElementById('autoModeInterval').value = (settings.autoModeInterval || 3600000) / 3600000;
     document.getElementById('notifications').checked = settings.notifications !== false;
     document.getElementById('closeTabs').checked = settings.closeTabs !== false;
   }
@@ -32,10 +28,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function saveSettings() {
   try {
     const settings = {
-      searchEngine: document.getElementById('searchEngine').value,
       delayBetweenQueries: parseInt(document.getElementById('queryDelay').value) * 1000,
       queriesPerSession: parseInt(document.getElementById('queriesPerSession').value),
-      autoModeInterval: parseInt(document.getElementById('autoModeInterval').value) * 3600000,
       notifications: document.getElementById('notifications').checked,
       closeTabs: document.getElementById('closeTabs').checked
     };
@@ -69,7 +63,6 @@ async function clearAllData() {
     await chrome.storage.local.set({
       executedQueries: [],
       selectedQueries: [],
-      autoMode: false,
       settings: DEFAULT_SETTINGS
     });
 

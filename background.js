@@ -3,185 +3,212 @@
 const API_BASE_URL = 'http://localhost:5001';
 const GOOGLE_SEARCH_URL = 'https://www.google.com/search?q=';
 
-// State management
-let queryQueue = [];
+// ── State ──────────────────────────────────────────────────────────
 let isExecuting = false;
-let autoModeInterval = null;
+let stopRequested = false;
+let executionTabId = null;
 
-// Installation and updates
-chrome.runtime.onInstalled.addListener((details) => {
-  console.log('Privacy Shield installed:', details.reason);
-  
-  // Initialize storage
+// ── Install ────────────────────────────────────────────────────────
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('Privacy Shield installed');
   chrome.storage.local.set({
     executedQueries: [],
     selectedQueries: [],
-    autoMode: false,
+    executionState: null,
     settings: {
       delayBetweenQueries: 3000,
       queriesPerSession: 10,
-      autoModeInterval: 3600000 // 1 hour
+      notifications: true,
+      closeTabs: true
     }
   });
-  
-  // Create alarm for periodic tasks
-  chrome.alarms.create('periodicCheck', { periodInMinutes: 60 });
+  chrome.contextMenus.create({
+    id: 'addToPersona',
+    title: 'Add to Privacy Shield',
+    contexts: ['selection']
+  });
 });
 
-// Message handling from popup and content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Received message:', message.action);
-  
-  switch (message.action) {
+// ── Message router ─────────────────────────────────────────────────
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  switch (msg.action) {
+
     case 'executeQueries':
-      handleExecuteQueries(message.queries);
+      handleExecuteQueries(msg.queries, false);
       sendResponse({ success: true });
       break;
-      
-    case 'openPersonaSelector':
-      openPersonaSelector(message.personas);
+
+    case 'resumeExecution':
+      resumeExecution();
       sendResponse({ success: true });
       break;
-      
-    case 'toggleAutoMode':
-      handleAutoModeToggle(message.enabled);
-      sendResponse({ success: true });
-      break;
-      
+
     case 'stopExecution':
       stopQueryExecution();
       sendResponse({ success: true });
       break;
-      
+
+    case 'openPersonaSelector':
+      openPersonaSelector(msg.personas);
+      sendResponse({ success: true });
+      break;
+
     case 'getStatus':
-      getExecutionStatus().then(status => sendResponse(status));
-      return true; // Keep channel open for async response
-      
+      getExecutionStatus().then(s => sendResponse(s));
+      return true;
+
+    case 'deletePersona':
+      handleDeletePersona(msg.personaIndex).then(r => sendResponse(r));
+      return true;
+
+    case 'regeneratePersona':
+      handleRegeneratePersona(msg.profile).then(r => sendResponse(r));
+      return true;
+
+    case 'settingsUpdated':
+      sendResponse({ success: true });
+      break;
+
     default:
       sendResponse({ success: false, error: 'Unknown action' });
   }
-  
   return true;
 });
 
-// Reusable tab for query execution
-let executionTabId = null;
+// ── Query Execution ────────────────────────────────────────────────
 
-// Query execution
-async function handleExecuteQueries(queries) {
+async function handleExecuteQueries(queries, isResume) {
   if (isExecuting) {
-    console.log('Already executing queries');
+    console.log('Already executing');
     return;
   }
-  
-  queryQueue = [...queries];
+
   isExecuting = true;
-  
+  stopRequested = false;
+
   const { settings } = await chrome.storage.local.get(['settings']);
   const delay = settings?.delayBetweenQueries || 3000;
   const shouldCloseTabs = settings?.closeTabs !== false;
-  
-  console.log(`Starting execution of ${queryQueue.length} queries`);
-  
-  let completed = 0;
-  const executedQueries = [];
 
-  // Create a single background tab to reuse for all queries
+  let queue, startIndex;
+  if (isResume) {
+    const { executionState } = await chrome.storage.local.get(['executionState']);
+    if (!executionState || !executionState.queue.length) {
+      isExecuting = false;
+      return;
+    }
+    queue = executionState.queue;
+    startIndex = executionState.currentIndex;
+  } else {
+    queue = [...queries];
+    startIndex = 0;
+  }
+
+  const total = queue.length;
+
+  await chrome.storage.local.set({
+    executionState: { queue, currentIndex: startIndex, total }
+  });
+
+  // Create reusable tab
   try {
     const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
     executionTabId = tab.id;
   } catch (err) {
-    console.error('Failed to create execution tab:', err);
+    console.error('Tab creation failed:', err);
     isExecuting = false;
     return;
   }
-  
-  for (const query of queryQueue) {
-    if (!isExecuting) break; // Stop if cancelled
-    
-    try {
-      await executeQuery(query);
-      executedQueries.push({
-        query: query,
-        timestamp: Date.now(),
-        searchEngine: searchEngine
+
+  let completed = startIndex;
+  const newExecuted = [];
+
+  for (let i = startIndex; i < total; i++) {
+    if (stopRequested) {
+      console.log(`Stop requested at index ${i}`);
+      await chrome.storage.local.set({
+        executionState: { queue, currentIndex: i, total }
       });
-      
-      completed++;
-      
-      // Notify popup of progress
+      break;
+    }
+
+    try {
+      await executeQuery(queue[i]);
+      newExecuted.push({ query: queue[i], timestamp: Date.now(), searchEngine: 'google' });
+      completed = i + 1;
+
+      await chrome.storage.local.set({
+        executionState: { queue, currentIndex: completed, total }
+      });
+
       chrome.runtime.sendMessage({
-        action: 'queryProgress',
-        current: completed,
-        total: queryQueue.length
-      }).catch(() => {}); // popup may be closed
-      
-      // Wait between queries
-      if (completed < queryQueue.length) {
-        await sleep(delay);
-      }
-      
+        action: 'queryProgress', current: completed, total
+      }).catch(() => {});
+
     } catch (error) {
-      console.error('Query execution error:', error);
+      console.error('Query error:', error);
+      completed = i + 1;
+    }
+
+    if (i < total - 1 && !stopRequested) {
+      await interruptableSleep(delay);
     }
   }
-  
-  // Close the reusable tab when done
+
+  // Cleanup tab
   if (executionTabId !== null && shouldCloseTabs) {
     chrome.tabs.remove(executionTabId).catch(() => {});
-    executionTabId = null;
   }
-  
-  // Store executed queries
-  const { executedQueries: existing } = await chrome.storage.local.get(['executedQueries']);
-  await chrome.storage.local.set({
-    executedQueries: [...(existing || []), ...executedQueries]
-  });
-  
+  executionTabId = null;
+
+  // Persist executed queries
+  if (newExecuted.length > 0) {
+    const { executedQueries: existing } = await chrome.storage.local.get(['executedQueries']);
+    await chrome.storage.local.set({
+      executedQueries: [...(existing || []), ...newExecuted]
+    });
+  }
+
+  const finished = completed >= total;
+  if (finished) {
+    await chrome.storage.local.set({ executionState: null });
+  }
+
   isExecuting = false;
-  
-  // Notify completion
+  stopRequested = false;
+
   chrome.runtime.sendMessage({
     action: 'queriesComplete',
-    count: completed,
-    stats: {
-      executed: completed,
-      failed: queryQueue.length - completed
-    }
-  }).catch(() => {}); // popup may be closed
-  
-  console.log(`Completed ${completed} of ${queryQueue.length} queries`);
+    count: newExecuted.length,
+    finished,
+    stoppedAt: finished ? null : completed
+  }).catch(() => {});
 }
 
-async function executeQuery(query, searchEngine = 'google') {
+async function resumeExecution() {
+  await handleExecuteQueries([], true);
+}
+
+async function executeQuery(query) {
   const searchUrl = GOOGLE_SEARCH_URL + encodeURIComponent(query);
-  
+
   return new Promise((resolve, reject) => {
-    // Navigate the existing tab to the new search URL
-    chrome.tabs.update(executionTabId, { url: searchUrl }, (tab) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
+    chrome.tabs.update(executionTabId, { url: searchUrl }, () => {
+      if (chrome.runtime.lastError) return reject(chrome.runtime.lastError);
 
       let settled = false;
-      
+
       function listener(tabId, info) {
         if (tabId === executionTabId && info.status === 'complete') {
           if (settled) return;
           settled = true;
           chrome.tabs.onUpdated.removeListener(listener);
-          
-          // Keep page loaded for a few seconds to simulate real browsing
-          setTimeout(() => {
-            resolve();
-          }, 2000);
+          setTimeout(resolve, 2000);
         }
       }
 
       chrome.tabs.onUpdated.addListener(listener);
-      
-      // Safety timeout
+
       setTimeout(() => {
         if (settled) return;
         settled = true;
@@ -193,142 +220,109 @@ async function executeQuery(query, searchEngine = 'google') {
 }
 
 function stopQueryExecution() {
-  isExecuting = false;
-  queryQueue = [];
+  stopRequested = true;
+
   if (executionTabId !== null) {
     chrome.tabs.remove(executionTabId).catch(() => {});
     executionTabId = null;
   }
-  console.log('Query execution stopped');
+
+  console.log('Stop requested');
 }
 
-// Persona selector
+function interruptableSleep(ms) {
+  return new Promise(resolve => {
+    const start = Date.now();
+    const iv = setInterval(() => {
+      if (stopRequested || Date.now() - start >= ms) {
+        clearInterval(iv);
+        resolve();
+      }
+    }, 200);
+  });
+}
+
+// ── Persona management ─────────────────────────────────────────────
+
+async function handleDeletePersona(personaIndex) {
+  const { personas, selectedQueries } = await chrome.storage.local.get(['personas', 'selectedQueries']);
+  if (!personas || personaIndex < 0 || personaIndex >= personas.length) {
+    return { success: false, error: 'Invalid index' };
+  }
+
+  const removedQueries = new Set(personas[personaIndex].queries || []);
+  const cleaned = (selectedQueries || []).filter(q => !removedQueries.has(q));
+
+  personas.splice(personaIndex, 1);
+  await chrome.storage.local.set({ personas, selectedQueries: cleaned });
+  return { success: true, personas };
+}
+
+async function handleRegeneratePersona(profile) {
+  try {
+    const resp = await fetch(`${API_BASE_URL}/api/generate-personas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile, count: 1 })
+    });
+    if (!resp.ok) throw new Error('Backend error');
+    const data = await resp.json();
+
+    const { personas } = await chrome.storage.local.get(['personas']);
+    const updated = [...(personas || []), data.personas[0]];
+    await chrome.storage.local.set({ personas: updated });
+
+    return { success: true, personas: updated };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ── Persona selector window ────────────────────────────────────────
+
 function openPersonaSelector(personas) {
-  const width = 800;
-  const height = 600;
-  
-  chrome.windows.create({
-    url: chrome.runtime.getURL('persona-selector.html'),
-    type: 'popup',
-    width: width,
-    height: height,
-    left: Math.round((screen.width - width) / 2),
-    top: Math.round((screen.height - height) / 2)
-  }, (window) => {
-    // Store personas for the selector to access
-    chrome.storage.local.set({
-      tempPersonas: personas,
-      selectorWindowId: window.id
+  chrome.storage.local.set({ tempPersonas: personas }, () => {
+    chrome.windows.create({
+      url: chrome.runtime.getURL('persona-selector.html'),
+      type: 'popup', width: 1000, height: 700,
+      left: Math.round((screen.width - 1000) / 2),
+      top: Math.round((screen.height - 700) / 2)
     });
   });
 }
 
-// Auto mode
-async function handleAutoModeToggle(enabled) {
-  await chrome.storage.local.set({ autoMode: enabled });
-  
-  if (enabled) {
-    startAutoMode();
-  } else {
-    stopAutoMode();
-  }
-}
+// ── Status ─────────────────────────────────────────────────────────
 
-async function startAutoMode() {
-  const { settings } = await chrome.storage.local.get(['settings']);
-  const intervalMinutes = (settings?.autoModeInterval || 3600000) / 60000;
-
-  chrome.alarms.create('autoMode', { periodInMinutes: intervalMinutes });
-  await executeAutoQueries(); // run immediately
-}
-
-function stopAutoMode() {
-  chrome.alarms.clear('autoMode');
-}
-
-async function executeAutoQueries() {
-  console.log('Executing auto queries');
-  
-  const { selectedQueries, settings } = await chrome.storage.local.get([
-    'selectedQueries',
-    'settings'
-  ]);
-  
-  if (!selectedQueries || selectedQueries.length === 0) {
-    console.log('No queries selected for auto mode');
-    return;
-  }
-  
-  const queriesPerSession = settings?.queriesPerSession || 10;
-  const queriesToExecute = selectedQueries
-    .sort(() => Math.random() - 0.5) // Randomize
-    .slice(0, queriesPerSession);
-  
-  await handleExecuteQueries(queriesToExecute);
-}
-
-// Alarm handling for periodic tasks
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === 'periodicCheck' || alarm.name === 'autoMode') {
-    const { autoMode } = await chrome.storage.local.get(['autoMode']);
-    if (autoMode && !isExecuting) {
-      await executeAutoQueries();
-    }
-  }
-});
-
-// Status reporting
 async function getExecutionStatus() {
   const data = await chrome.storage.local.get([
-    'executedQueries',
-    'selectedQueries',
-    'autoMode'
+    'executedQueries', 'selectedQueries', 'executionState', 'personas'
   ]);
-  
   return {
-    isExecuting: isExecuting,
-    queueLength: queryQueue.length,
+    isExecuting,
+    stopRequested,
+    executionState: data.executionState || null,
     totalExecuted: data.executedQueries?.length || 0,
     totalSelected: data.selectedQueries?.length || 0,
-    autoMode: data.autoMode || false
+    personaCount: data.personas?.length || 0
   };
 }
 
-// Utility functions
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+// ── Context menu ───────────────────────────────────────────────────
 
-// Context menu integration (optional)
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'addToPersona',
-    title: 'Add to Privacy Shield',
-    contexts: ['selection']
-  });
-});
-
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === 'addToPersona' && info.selectionText) {
     const { selectedQueries } = await chrome.storage.local.get(['selectedQueries']);
-    const updated = [...(selectedQueries || []), info.selectionText];
-    
-    await chrome.storage.local.set({ selectedQueries: updated });
-    
-    // Notify user
+    await chrome.storage.local.set({
+      selectedQueries: [...(selectedQueries || []), info.selectionText]
+    });
     chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'Privacy Shield',
-      message: 'Query added to selection'
+      type: 'basic', iconUrl: 'icons/icon48.png',
+      title: 'Privacy Shield', message: 'Query added to selection'
     });
   }
 });
 
-// Error handling
 chrome.runtime.onSuspend.addListener(() => {
-  console.log('Extension suspending, cleaning up...');
-  stopAutoMode();
   stopQueryExecution();
 });
 

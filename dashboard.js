@@ -1,488 +1,370 @@
-// Dashboard JavaScript
+// Dashboard JavaScript — auto-refreshes every 3 seconds
 
 let confidenceChart = null;
-let interestsChart = null;
+let refreshTimer = null;
 
-// Initialize dashboard
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('Dashboard loading...');
+// ── Init ───────────────────────────────────────────────────────────
 
-  // Bind navigation buttons
-  document.getElementById('refreshBtn').addEventListener('click', refreshData);
+document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('exportBtn').addEventListener('click', exportData);
-  document.getElementById('settingsNavBtn').addEventListener('click', openSettings);
-  document.getElementById('viewDetailsBtn').addEventListener('click', viewDetails);
-  document.getElementById('getStartedBtn').addEventListener('click', openExtension);
+  document.getElementById('settingsBtn').addEventListener('click', openSettings);
+  document.getElementById('addPersonaBtn').addEventListener('click', addPersona);
+  document.getElementById('execAction').addEventListener('click', handleExecAction);
 
-  await loadDashboardData();
+  refresh();
+  refreshTimer = setInterval(refresh, 3000);
 });
 
-async function loadDashboardData() {
+// ── Main refresh ───────────────────────────────────────────────────
+
+async function refresh() {
   try {
     const data = await chrome.storage.local.get([
-      'initialProfile',
-      'updatedProfile',
-      'profileComparison',
-      'executedQueries',
-      'personas'
+      'initialProfile', 'updatedProfile', 'profileComparison',
+      'executedQueries', 'personas', 'executionState',
+      'selectedQueries'
     ]);
-    
-    console.log('Loaded data:', data);
-    
-    if (!data.initialProfile) {
+
+    // Also get live status from background
+    let liveStatus = null;
+    try {
+      liveStatus = await chrome.runtime.sendMessage({ action: 'getStatus' });
+    } catch (e) { /* background may not be ready */ }
+
+    const hasData = data.initialProfile || (data.personas && data.personas.length > 0) ||
+                    (data.executedQueries && data.executedQueries.length > 0);
+
+    if (!hasData) {
       showEmptyState();
       return;
     }
-    
+
     hideEmptyState();
-    populateDashboard(data);
-    
-  } catch (error) {
-    console.error('Error loading dashboard data:', error);
-    showEmptyState();
+    updateExecBanner(liveStatus, data.executionState);
+    updateMetrics(data, liveStatus);
+    updatePersonaList(data.personas || []);
+    updateTimeline(data.executedQueries || [], data.personas || []);
+    updateComparisonTable(data.profileComparison);
+    updateChart(data.profileComparison);
+    updateRecommendation(data.profileComparison);
+
+    // Tick indicator
+    const ind = document.getElementById('refreshIndicator');
+    ind.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  } catch (e) {
+    console.error('Dashboard refresh error:', e);
   }
 }
 
-function populateDashboard(data) {
-  const { 
-    initialProfile, 
-    updatedProfile, 
-    profileComparison, 
-    executedQueries, 
-    personas 
-  } = data;
-  
-  // Update metrics
-  updateMetrics(profileComparison, executedQueries, personas);
-  
-  // Update comparison table
-  updateComparisonTable(initialProfile, updatedProfile, profileComparison);
-  
-  // Update charts
-  updateConfidenceChart(profileComparison);
-  updateInterestsChart(initialProfile, updatedProfile);
-  
-  // Update timeline
-  updateTimeline(executedQueries, personas);
-  
-  // Show recommendation
-  showRecommendation(profileComparison);
-}
+// ── Execution Banner ───────────────────────────────────────────────
 
-function updateMetrics(comparison, executedQueries, personas) {
-  // Obfuscation score
-  const obfuscationScore = comparison?.obfuscation_score || 0;
-  document.getElementById('obfuscationScore').textContent = Math.round(obfuscationScore) + '%';
-  
-  const scoreChange = document.getElementById('scoreChange');
-  if (obfuscationScore > 0) {
-    scoreChange.textContent = `↑ ${Math.round(obfuscationScore)}% increase`;
-    scoreChange.className = 'metric-change positive';
-  }
-  
-  // Queries executed
-  document.getElementById('queriesExecuted').textContent = executedQueries?.length || 0;
-  
-  // Personas generated
-  document.getElementById('personasGenerated').textContent = personas?.length || 0;
-  
-  // Interest diversity
-  const interestChanges = comparison?.interest_changes;
-  if (interestChanges) {
-    const diversity = interestChanges.new_interests?.length || 0;
-    document.getElementById('interestDiversity').textContent = diversity;
-    
-    if (diversity > 0) {
-      const diversityChange = document.getElementById('diversityChange');
-      diversityChange.textContent = `+${diversity} new categories`;
-      diversityChange.className = 'metric-change positive';
-    }
+function updateExecBanner(status, execState) {
+  const banner = document.getElementById('execBanner');
+  const label = document.getElementById('execLabel');
+  const progress = document.getElementById('execProgress');
+  const count = document.getElementById('execCount');
+  const btn = document.getElementById('execAction');
+
+  const running = status?.isExecuting;
+  const paused = execState && execState.currentIndex < execState.total && !running;
+
+  if (running && execState) {
+    banner.className = 'exec-banner running';
+    const pct = (execState.currentIndex / execState.total) * 100;
+    label.textContent = '⏳ Executing queries...';
+    progress.style.width = pct + '%';
+    count.textContent = `${execState.currentIndex} / ${execState.total}`;
+    btn.textContent = '⏹ Stop';
+    btn.className = 'btn-stop';
+    btn.dataset.action = 'stop';
+  } else if (paused) {
+    banner.className = 'exec-banner paused';
+    const pct = (execState.currentIndex / execState.total) * 100;
+    label.textContent = '⏸ Paused';
+    progress.style.width = pct + '%';
+    count.textContent = `${execState.currentIndex} / ${execState.total}`;
+    btn.textContent = '▶️ Resume';
+    btn.className = 'btn-resume';
+    btn.dataset.action = 'resume';
+  } else {
+    banner.className = 'exec-banner idle';
   }
 }
 
-function updateComparisonTable(initial, updated, comparison) {
-  const tbody = document.querySelector('#comparisonTable tbody');
-  tbody.innerHTML = '';
-  
-  if (!comparison || !comparison.demographic_changes) {
+function handleExecAction() {
+  const btn = document.getElementById('execAction');
+  if (btn.dataset.action === 'stop') {
+    chrome.runtime.sendMessage({ action: 'stopExecution' });
+  } else if (btn.dataset.action === 'resume') {
+    chrome.runtime.sendMessage({ action: 'resumeExecution' });
+  }
+}
+
+// ── Metrics ────────────────────────────────────────────────────────
+
+function updateMetrics(data, status) {
+  const comparison = data.profileComparison;
+  const obfScore = comparison?.obfuscation_score || 0;
+
+  document.getElementById('obfuscationScore').textContent = Math.round(obfScore) + '%';
+  const change = document.getElementById('scoreChange');
+  if (obfScore > 0) {
+    change.textContent = `↑ ${Math.round(obfScore)}% from baseline`;
+  } else {
+    change.textContent = 'Run queries to see changes';
+  }
+
+  document.getElementById('metricExecuted').textContent = data.executedQueries?.length || 0;
+  document.getElementById('metricPersonas').textContent = data.personas?.length || 0;
+}
+
+// ── Persona List ───────────────────────────────────────────────────
+
+function updatePersonaList(personas) {
+  const container = document.getElementById('personaList');
+
+  if (!personas.length) {
+    container.innerHTML = '<p style="color:#6c757d;">No personas yet. Generate them from the popup.</p>';
     return;
   }
-  
-  const changes = comparison.demographic_changes;
-  const confidenceDeltas = comparison.confidence_deltas || {};
-  
-  const attributeLabels = {
-    'age_range': '👤 Age Range',
-    'gender': '⚧ Gender',
-    'profession': '💼 Profession',
-    'marital_status': '💑 Marital Status'
-  };
-  
-  for (const [key, value] of Object.entries(changes)) {
-    const row = document.createElement('tr');
-    
-    const delta = confidenceDeltas[key];
-    const initialConf = delta?.initial_confidence || 0;
-    const updatedConf = delta?.updated_confidence || 0;
-    const deltaValue = delta?.delta || 0;
-    
-    const deltaClass = deltaValue < 0 ? 'negative' : deltaValue > 0 ? 'positive' : 'neutral';
-    const deltaSign = deltaValue < 0 ? '' : '+';
-    const deltaPercent = Math.abs(Math.round(deltaValue * 100));
-    
-    row.innerHTML = `
-      <td><strong>${attributeLabels[key] || key}</strong></td>
-      <td>
-        ${value.initial || 'unknown'}
-        <div class="confidence-bar">
-          <div class="confidence-fill" style="width: ${initialConf * 100}%"></div>
+
+  container.innerHTML = personas.map((p, i) => {
+    const qCount = p.queries?.length || 0;
+    return `
+      <div class="persona-item" data-index="${i}">
+        <div class="persona-item-info">
+          <div class="persona-item-title">${escapeHtml(p.title || 'Persona ' + (i + 1))}</div>
+          <div class="persona-item-meta">${qCount} queries · ${p.category || 'General'}</div>
         </div>
-        <small style="color: #6c757d;">${Math.round(initialConf * 100)}% confidence</small>
-      </td>
-      <td>
-        ${value.updated || 'unknown'}
-        <div class="confidence-bar">
-          <div class="confidence-fill" style="width: ${updatedConf * 100}%"></div>
-        </div>
-        <small style="color: #6c757d;">${Math.round(updatedConf * 100)}% confidence</small>
-      </td>
-      <td>
-        <span class="delta ${deltaClass}">
-          ${deltaSign}${deltaPercent}%
-        </span>
-      </td>
+        <button class="delete-persona-btn" data-index="${i}">🗑️ Delete</button>
+      </div>
     `;
-    
-    tbody.appendChild(row);
+  }).join('');
+
+  // Bind delete buttons
+  container.querySelectorAll('.delete-persona-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      const result = await chrome.runtime.sendMessage({ action: 'deletePersona', personaIndex: idx });
+      if (result.success) refresh();
+    });
+  });
+}
+
+async function addPersona() {
+  const { initialProfile } = await chrome.storage.local.get(['initialProfile']);
+  if (!initialProfile) {
+    alert('Analyze your search history first from the popup.');
+    return;
+  }
+
+  const btn = document.getElementById('addPersonaBtn');
+  btn.textContent = 'Generating...';
+  btn.disabled = true;
+
+  const result = await chrome.runtime.sendMessage({ action: 'regeneratePersona', profile: initialProfile });
+
+  btn.textContent = '+ New Persona';
+  btn.disabled = false;
+
+  if (result.success) {
+    refresh();
+  } else {
+    alert('Failed: ' + result.error);
   }
 }
 
-function updateConfidenceChart(comparison) {
-  if (!comparison || !comparison.confidence_deltas) {
+// ── Timeline ───────────────────────────────────────────────────────
+
+function updateTimeline(executedQueries, personas) {
+  const container = document.getElementById('timeline');
+  const events = [];
+
+  // Persona creation events
+  personas.forEach((p, i) => {
+    if (p.created_at) {
+      events.push({
+        time: new Date(p.created_at),
+        text: `🎭 Generated persona: ${p.title || 'Persona ' + (i + 1)}`
+      });
+    }
+  });
+
+  // Group executed queries by day
+  const byDay = {};
+  (executedQueries || []).forEach(q => {
+    const d = new Date(q.timestamp);
+    const key = d.toLocaleDateString();
+    if (!byDay[key]) byDay[key] = { date: d, count: 0, queries: [] };
+    byDay[key].count++;
+    if (byDay[key].queries.length < 3) byDay[key].queries.push(q.query);
+  });
+
+  Object.values(byDay).forEach(g => {
+    const preview = g.queries.map(q => `"${q}"`).join(', ');
+    events.push({
+      time: g.date,
+      text: `🔍 Executed ${g.count} queries (${preview}${g.count > 3 ? '...' : ''})`
+    });
+  });
+
+  events.sort((a, b) => b.time - a.time);
+
+  if (events.length === 0) {
+    container.innerHTML = '<p style="color:#6c757d;text-align:center;padding:20px;">No activity yet.</p>';
     return;
   }
-  
-  const ctx = document.getElementById('confidenceChart').getContext('2d');
-  
+
+  container.innerHTML = events.slice(0, 15).map(ev => `
+    <div class="timeline-item">
+      <div class="timeline-content">
+        <div class="timeline-time">${formatTimeAgo(ev.time)}</div>
+        <div class="timeline-text">${escapeHtml(ev.text)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Comparison Table ───────────────────────────────────────────────
+
+function updateComparisonTable(comparison) {
+  const tbody = document.querySelector('#comparisonTable tbody');
+  if (!comparison || !comparison.demographic_changes) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:#6c757d;text-align:center;padding:20px;">Run queries then check for profile changes</td></tr>';
+    return;
+  }
+
+  const labels = {
+    age_range: '👤 Age Range', gender: '⚧ Gender',
+    profession: '💼 Profession', marital_status: '💑 Marital Status'
+  };
+
+  const deltas = comparison.confidence_deltas || {};
+
+  tbody.innerHTML = Object.entries(comparison.demographic_changes).map(([key, val]) => {
+    const d = deltas[key] || {};
+    const iConf = d.initial_confidence || 0;
+    const uConf = d.updated_confidence || 0;
+    const delta = d.delta || 0;
+    const cls = delta < 0 ? 'negative' : delta > 0 ? 'positive' : 'neutral';
+    const sign = delta < 0 ? '' : '+';
+
+    return `<tr>
+      <td><strong>${labels[key] || key}</strong></td>
+      <td>
+        ${val.initial || '?'}
+        <div class="confidence-bar"><div class="confidence-fill" style="width:${iConf * 100}%"></div></div>
+        <small style="color:#6c757d">${Math.round(iConf * 100)}%</small>
+      </td>
+      <td>
+        ${val.updated || '?'}
+        <div class="confidence-bar"><div class="confidence-fill" style="width:${uConf * 100}%"></div></div>
+        <small style="color:#6c757d">${Math.round(uConf * 100)}%</small>
+      </td>
+      <td><span class="delta ${cls}">${sign}${Math.round(Math.abs(delta) * 100)}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Chart ──────────────────────────────────────────────────────────
+
+function updateChart(comparison) {
+  if (!comparison?.confidence_deltas) return;
+  if (typeof Chart === 'undefined') return; // Chart.js not loaded
+
+  const ctx = document.getElementById('confidenceChart');
+  if (!ctx) return;
+
   const labels = [];
-  const initialData = [];
-  const updatedData = [];
-  
-  for (const [key, value] of Object.entries(comparison.confidence_deltas)) {
-    const label = key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-    labels.push(label);
-    initialData.push(Math.round(value.initial_confidence * 100));
-    updatedData.push(Math.round(value.updated_confidence * 100));
+  const initial = [];
+  const updated = [];
+
+  for (const [key, val] of Object.entries(comparison.confidence_deltas)) {
+    labels.push(key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()));
+    initial.push(Math.round(val.initial_confidence * 100));
+    updated.push(Math.round(val.updated_confidence * 100));
   }
-  
-  if (confidenceChart) {
-    confidenceChart.destroy();
-  }
-  
+
+  if (confidenceChart) confidenceChart.destroy();
+
   confidenceChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: labels,
+      labels,
       datasets: [
         {
-          label: 'Initial Confidence',
-          data: initialData,
-          backgroundColor: 'rgba(102, 126, 234, 0.6)',
-          borderColor: 'rgba(102, 126, 234, 1)',
-          borderWidth: 2
+          label: 'Initial', data: initial,
+          backgroundColor: 'rgba(102,126,234,0.6)', borderColor: 'rgba(102,126,234,1)', borderWidth: 2
         },
         {
-          label: 'Current Confidence',
-          data: updatedData,
-          backgroundColor: 'rgba(118, 75, 162, 0.6)',
-          borderColor: 'rgba(118, 75, 162, 1)',
-          borderWidth: 2
+          label: 'Current', data: updated,
+          backgroundColor: 'rgba(118,75,162,0.6)', borderColor: 'rgba(118,75,162,1)', borderWidth: 2
         }
       ]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100,
-          ticks: {
-            callback: function(value) {
-              return value + '%';
-            }
-          }
-        }
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top'
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return context.dataset.label + ': ' + context.parsed.y + '%';
-            }
-          }
-        }
-      }
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
+      plugins: { legend: { position: 'top' } }
     }
   });
 }
 
-function updateInterestsChart(initial, updated) {
-  if (!initial || !updated) {
-    return;
-  }
-  
-  const ctx = document.getElementById('interestsChart').getContext('2d');
-  
-  const initialInterests = initial.interests?.categories || {};
-  const updatedInterests = updated.interests?.categories || {};
-  
-  // Get all unique categories
-  const allCategories = new Set([
-    ...Object.keys(initialInterests),
-    ...Object.keys(updatedInterests)
-  ]);
-  
-  const labels = Array.from(allCategories).map(cat => 
-    cat.charAt(0).toUpperCase() + cat.slice(1)
-  );
-  
-  const initialData = labels.map((_, i) => {
-    const cat = Array.from(allCategories)[i];
-    return initialInterests[cat]?.percentage || 0;
-  });
-  
-  const updatedData = labels.map((_, i) => {
-    const cat = Array.from(allCategories)[i];
-    return updatedInterests[cat]?.percentage || 0;
-  });
-  
-  if (interestsChart) {
-    interestsChart.destroy();
-  }
-  
-  interestsChart = new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Initial Profile',
-          data: initialData,
-          backgroundColor: 'rgba(102, 126, 234, 0.2)',
-          borderColor: 'rgba(102, 126, 234, 1)',
-          borderWidth: 2,
-          pointBackgroundColor: 'rgba(102, 126, 234, 1)'
-        },
-        {
-          label: 'Current Profile',
-          data: updatedData,
-          backgroundColor: 'rgba(118, 75, 162, 0.2)',
-          borderColor: 'rgba(118, 75, 162, 1)',
-          borderWidth: 2,
-          pointBackgroundColor: 'rgba(118, 75, 162, 1)'
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        r: {
-          beginAtZero: true,
-          max: 100,
-          ticks: {
-            callback: function(value) {
-              return value + '%';
-            }
-          }
-        }
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top'
-        }
-      }
-    }
-  });
-}
+// ── Recommendation ─────────────────────────────────────────────────
 
-function updateTimeline(executedQueries, personas) {
-  const timeline = document.getElementById('timeline');
-  timeline.innerHTML = '';
-  
-  const events = [];
-  
-  // Add persona generation event
-  if (personas && personas.length > 0) {
-    const firstPersona = personas[0];
-    if (firstPersona.created_at) {
-      events.push({
-        time: new Date(firstPersona.created_at),
-        text: `Generated ${personas.length} inverse personas`,
-        icon: '🎭'
-      });
-    }
-  }
-  
-  // Add query execution events
-  if (executedQueries && executedQueries.length > 0) {
-    const groupedByDay = {};
-    
-    executedQueries.forEach(query => {
-      const date = new Date(query.timestamp);
-      const dayKey = date.toLocaleDateString();
-      
-      if (!groupedByDay[dayKey]) {
-        groupedByDay[dayKey] = {
-          date: date,
-          count: 0
-        };
-      }
-      groupedByDay[dayKey].count++;
-    });
-    
-    Object.values(groupedByDay).forEach(group => {
-      events.push({
-        time: group.date,
-        text: `Executed ${group.count} obfuscation queries`,
-        icon: '🔍'
-      });
-    });
-  }
-  
-  // Sort events by time (most recent first)
-  events.sort((a, b) => b.time - a.time);
-  
-  // Show only last 10 events
-  events.slice(0, 10).forEach(event => {
-    const item = document.createElement('div');
-    item.className = 'timeline-item';
-    
-    item.innerHTML = `
-      <div class="timeline-content">
-        <div class="timeline-time">${formatTimeAgo(event.time)}</div>
-        <div class="timeline-text">${event.icon} ${event.text}</div>
-      </div>
-    `;
-    
-    timeline.appendChild(item);
-  });
-  
-  if (events.length === 0) {
-    timeline.innerHTML = `
-      <div style="text-align: center; color: #6c757d; padding: 20px;">
-        No activity yet. Start executing queries to see your timeline.
-      </div>
-    `;
-  }
-}
-
-function showRecommendation(comparison) {
-  if (!comparison || !comparison.summary) {
-    return;
-  }
-  
+function updateRecommendation(comparison) {
   const box = document.getElementById('recommendationBox');
   const text = document.getElementById('recommendationText');
-  
-  text.textContent = comparison.summary.recommendation || 
-    'Continue executing queries to improve obfuscation.';
-  
+  if (!comparison?.summary?.recommendation) {
+    box.style.display = 'none';
+    return;
+  }
+  text.textContent = comparison.summary.recommendation;
   box.style.display = 'block';
 }
 
+// ── Helpers ─────────────────────────────────────────────────────────
+
 function formatTimeAgo(date) {
-  const seconds = Math.floor((new Date() - date) / 1000);
-  
-  if (seconds < 60) return 'Just now';
-  if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
-  if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
-  if (seconds < 604800) return Math.floor(seconds / 86400) + ' days ago';
-  
+  const s = Math.floor((Date.now() - date) / 1000);
+  if (s < 60) return 'Just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 604800) return Math.floor(s / 86400) + 'd ago';
   return date.toLocaleDateString();
+}
+
+function escapeHtml(t) {
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
 }
 
 function showEmptyState() {
   document.getElementById('emptyState').style.display = 'block';
   document.getElementById('metricsGrid').style.display = 'none';
-  document.querySelectorAll('.content-grid').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.content-grid').forEach(e => e.style.display = 'none');
 }
 
 function hideEmptyState() {
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('metricsGrid').style.display = 'grid';
-  document.querySelectorAll('.content-grid').forEach(el => el.style.display = 'grid');
-}
-
-// Action functions
-async function refreshData() {
-  console.log('Refreshing dashboard data...');
-  await loadDashboardData();
+  document.querySelectorAll('.content-grid').forEach(e => e.style.display = 'grid');
 }
 
 async function exportData() {
-  try {
-    const data = await chrome.storage.local.get([
-      'initialProfile',
-      'updatedProfile',
-      'profileComparison',
-      'executedQueries',
-      'personas'
-    ]);
-    
-    const exportData = {
-      exportDate: new Date().toISOString(),
-      ...data
-    };
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-      type: 'application/json' 
-    });
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `privacy-shield-data-${Date.now()}.json`;
-    a.click();
-    
-    URL.revokeObjectURL(url);
-    
-    console.log('Data exported successfully');
-    
-  } catch (error) {
-    console.error('Export error:', error);
-    alert('Failed to export data');
-  }
+  const data = await chrome.storage.local.get(null);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `privacy-shield-export-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function openSettings() {
   chrome.windows.create({
     url: chrome.runtime.getURL('settings.html'),
-    type: 'popup',
-    width: 600,
-    height: 700
+    type: 'popup', width: 600, height: 700
   });
 }
-
-function openExtension() {
-  chrome.action.openPopup();
-}
-
-function viewDetails() {
-  // Could open a detailed view or modal
-  alert('Detailed view coming soon!');
-}
-
-// Listen for updates from extension
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'dashboardUpdate') {
-    console.log('Received dashboard update');
-    refreshData();
-  }
-});

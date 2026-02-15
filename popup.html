@@ -5,11 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Shield</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       width: 400px;
@@ -20,207 +16,86 @@
       padding: 20px;
     }
 
-    .header {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .subtitle {
-      font-size: 13px;
-      opacity: 0.9;
-    }
+    .header { text-align: center; margin-bottom: 25px; }
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+    .subtitle { font-size: 13px; opacity: 0.9; }
 
     .card {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255,255,255,0.15);
       backdrop-filter: blur(10px);
       border-radius: 12px;
       padding: 18px;
       margin-bottom: 15px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255,255,255,0.2);
     }
 
     .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: 14px; font-weight: 600; margin-bottom: 12px;
+      text-transform: uppercase; letter-spacing: 0.5px;
     }
 
     .upload-area {
-      border: 2px dashed rgba(255, 255, 255, 0.4);
-      border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-bottom: 10px;
+      border: 2px dashed rgba(255,255,255,0.4);
+      border-radius: 8px; padding: 20px; text-align: center;
+      cursor: pointer; transition: all 0.3s ease; margin-bottom: 10px;
     }
-
-    .upload-area:hover {
-      border-color: rgba(255, 255, 255, 0.7);
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .upload-area.dragover {
-      border-color: #fff;
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    #fileInput {
-      display: none;
-    }
-
-    .upload-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-
-    .upload-text {
-      font-size: 13px;
-      opacity: 0.9;
-    }
+    .upload-area:hover { border-color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.1); }
+    .upload-area.dragover { border-color: #fff; background: rgba(255,255,255,0.2); }
+    #fileInput { display: none; }
+    .upload-icon { font-size: 32px; margin-bottom: 8px; }
+    .upload-text { font-size: 13px; opacity: 0.9; }
 
     .file-info {
-      font-size: 12px;
-      padding: 8px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
-      margin-top: 10px;
-      display: none;
+      font-size: 12px; padding: 8px; background: rgba(255,255,255,0.2);
+      border-radius: 6px; margin-top: 10px; display: none;
     }
 
     button {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-bottom: 10px;
+      width: 100%; padding: 12px; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all 0.3s ease; margin-bottom: 10px;
     }
 
-    .btn-primary {
-      background: #fff;
-      color: #667eea;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .btn-secondary:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.3);
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    .btn-primary { background: #fff; color: #667eea; }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .btn-secondary { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+    .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.3); }
+    .btn-danger { background: rgba(245,101,101,0.7); color: #fff; }
+    .btn-danger:hover:not(:disabled) { background: rgba(245,101,101,0.9); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .status {
-      font-size: 12px;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      display: none;
+      font-size: 12px; padding: 10px; border-radius: 6px;
+      margin-bottom: 10px; display: none;
     }
+    .status.success { background: rgba(72,187,120,0.3); border: 1px solid rgba(72,187,120,0.5); }
+    .status.error { background: rgba(245,101,101,0.3); border: 1px solid rgba(245,101,101,0.5); }
+    .status.info { background: rgba(66,153,225,0.3); border: 1px solid rgba(66,153,225,0.5); }
 
-    .status.success {
-      background: rgba(72, 187, 120, 0.3);
-      border: 1px solid rgba(72, 187, 120, 0.5);
-    }
+    .persona-status { font-size: 13px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 10px; }
+    .persona-count { font-weight: 600; color: #ffd700; }
 
-    .status.error {
-      background: rgba(245, 101, 101, 0.3);
-      border: 1px solid rgba(245, 101, 101, 0.5);
-    }
+    .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-    .status.info {
-      background: rgba(66, 153, 225, 0.3);
-      border: 1px solid rgba(66, 153, 225, 0.5);
-    }
-
-    .persona-status {
-      font-size: 13px;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-
-    .persona-count {
-      font-weight: 600;
-      color: #ffd700;
-    }
-
-    .quick-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .loading {
-      display: none;
-      text-align: center;
-      padding: 20px;
-    }
-
+    .loading { display: none; text-align: center; padding: 20px; }
     .spinner {
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top: 3px solid #fff;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 10px;
+      border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff;
+      border-radius: 50%; width: 40px; height: 40px;
+      animation: spin 1s linear infinite; margin: 0 auto 10px;
     }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .stat-box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; text-align: center; }
+    .stat-value { font-size: 20px; font-weight: 700; color: #ffd700; }
+    .stat-label { font-size: 11px; opacity: 0.8; margin-top: 4px; }
 
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 10px;
-    }
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin: 8px 0; overflow: hidden; }
+    .progress-fill { height: 100%; background: #ffd700; border-radius: 3px; transition: width 0.3s; }
+    .progress-text { font-size: 11px; opacity: 0.8; text-align: center; }
 
-    .stat-box {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 10px;
-      border-radius: 6px;
-      text-align: center;
-    }
-
-    .stat-value {
-      font-size: 20px;
-      font-weight: 700;
-      color: #ffd700;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      opacity: 0.8;
-      margin-top: 4px;
-    }
+    .persona-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .persona-actions button { margin-bottom: 0; font-size: 12px; padding: 8px; }
   </style>
 </head>
 <body>
@@ -231,11 +106,12 @@
 
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <p>Processing...</p>
+    <p id="loadingText">Processing...</p>
   </div>
 
   <div id="statusMessage" class="status"></div>
 
+  <!-- Upload -->
   <div class="card">
     <div class="section-title">📁 Upload Search History</div>
     <div class="upload-area" id="uploadArea">
@@ -247,17 +123,32 @@
       <input type="file" id="fileInput" accept=".json">
     </div>
     <div class="file-info" id="fileInfo"></div>
-    <button class="btn-primary" id="analyzeBtn" disabled>Analyze & Generate Profile</button>
+    <button class="btn-primary" id="analyzeBtn" disabled>Analyze &amp; Generate Profile</button>
   </div>
 
-  <div class="card" id="personaCard" style="display: none;">
+  <!-- Personas -->
+  <div class="card" id="personaCard" style="display:none;">
     <div class="section-title">🎭 Generated Personas</div>
     <div class="persona-status" id="personaStatus"></div>
     <button class="btn-primary" id="viewPersonasBtn">Select Queries to Execute</button>
     <button class="btn-secondary" id="executeQueriesBtn" disabled>Execute Selected Queries</button>
+    <button class="btn-danger" id="stopBtn" style="display:none;">⏹ Stop Execution</button>
+    <button class="btn-secondary" id="resumeBtn" style="display:none;">▶️ Resume Execution</button>
+
+    <!-- Progress bar shown during execution -->
+    <div id="progressSection" style="display:none;">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">0 / 0</div>
+    </div>
+
+    <div class="persona-actions">
+      <button class="btn-secondary" id="addPersonaBtn">➕ New Persona</button>
+      <button class="btn-danger" id="deletePersonaBtn">🗑️ Delete Last</button>
+    </div>
   </div>
 
-  <div class="card" id="statsCard" style="display: none;">
+  <!-- Stats -->
+  <div class="card" id="statsCard" style="display:none;">
     <div class="section-title">📊 Current Status</div>
     <div class="stats-grid">
       <div class="stat-box">
@@ -271,19 +162,13 @@
     </div>
   </div>
 
+  <!-- Quick Actions -->
   <div class="card">
     <div class="section-title">⚡ Quick Actions</div>
     <div class="quick-actions">
-      <button class="btn-secondary" id="dashboardBtn">
-        📈 Dashboard
-      </button>
-      <button class="btn-secondary" id="settingsBtn">
-        ⚙️ Settings
-      </button>
+      <button class="btn-secondary" id="dashboardBtn">📈 Dashboard</button>
+      <button class="btn-secondary" id="settingsBtn">⚙️ Settings</button>
     </div>
-    <button class="btn-secondary" id="startAutoBtn" style="margin-top: 10px;">
-      🤖 Start Auto Mode
-    </button>
   </div>
 
   <script src="popup.js"></script>
