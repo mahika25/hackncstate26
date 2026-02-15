@@ -1,15 +1,30 @@
 <!DOCTYPE html>
-<html>
-<head><link rel="stylesheet" href="popup.css"></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>blurB</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
 <body>
-  <div id="ollamaBar"></div>
-  <div id="personaGrid"></div>
-  <div id="noPersonaWarn">Select at least one persona</div>
-  <button id="btnGenerate">⬡ GENERATE QUERIES</button>
-  <div id="queryQueue"></div>
-  <button id="btnApproveAll" class="hidden">Approve All</button>
 
-  <script src="personas.js"></script>
+  <header>
+    <h1>blurB</h1>
+    <p class="subtitle">Generate noise queries to blur your ad profile</p>
+  </header>
+
+  <main>
+    <label for="personaSelect">Persona</label>
+    <select id="personaSelect"></select>
+
+    <button id="btnGenerate">Generate Queries</button>
+
+    <p id="statusMsg" class="status"></p>
+
+    <ul id="queryList"></ul>
+  </main>
+
   <script src="popup.js"></script>
+
 </body>
 </html>

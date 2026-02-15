@@ -17,7 +17,7 @@ PERSONAS = [
 
 class PersonaSearchRecommender:
 
-    def __init__(self, model: str = "llama3"):
+    def __init__(self, model: str = "llama3.2"):
         self.model = model
         # Build a lookup dict so we can find a persona by id quickly
         self._persona_map = {p["id"]: p for p in PERSONAS}

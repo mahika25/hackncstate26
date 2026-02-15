@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, Response
+from flask_cors import CORS 
 from personas_agent import PersonaSearchRecommender
 import threading
 import random
@@ -7,6 +8,7 @@ import queue
 import json
 
 app = Flask(__name__)
+CORS(app)
 recommender = PersonaSearchRecommender()
 
 # Stores approved queries yet to be dispatched
