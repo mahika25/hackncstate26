@@ -5,7 +5,6 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 
 
 class OllamaError(Exception):
-    """Custom exception for Ollama failures."""
     pass
 
 
@@ -16,33 +15,7 @@ def query_ollama(
     temperature: float = 0.7,
     stream: bool = False,
     timeout: int = 120,
-    extra_options: Optional[Dict[str, Any]] = None,
-) -> str:
-    """
-    Send a prompt to Ollama and return the generated response text.
-
-    Parameters
-    ----------
-    prompt : str
-        User query text.
-    model : str
-        Name of the ollama model (e.g., 'llama3', 'mistral', 'codellama').
-    system : Optional[str]
-        Optional system prompt.
-    temperature : float
-        Sampling temperature.
-    stream : bool
-        Whether to use streaming (False recommended for utils usage).
-    timeout : int
-        Request timeout in seconds.
-    extra_options : dict
-        Additional ollama options (top_p, num_ctx, etc.)
-
-    Returns
-    -------
-    str
-        Model output text.
-    """
+    extra_options: Optional[Dict[str, Any]] = None) -> str:
 
     payload = {
         "model": model,

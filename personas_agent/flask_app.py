@@ -10,7 +10,6 @@ from flask_cors import CORS
 import os
 import sys
 
-# Ensure sibling modules are importable regardless of cwd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from personas_agent import PersonaSearchRecommender
@@ -33,11 +32,9 @@ approved_lock = threading.Lock()
 sse_clients = []
 sse_clients_lock = threading.Lock()
 
-# Configuration for new features
 PERSONA_COUNT = 3
 CONFIDENCE_THRESHOLD = 0.6
 
-# Category keywords for query analysis
 CATEGORIES = {
     'technology': ['software', 'app', 'computer', 'phone', 'tech', 'coding', 'programming', 'AI', 'machine learning'],
     'entertainment': ['movie', 'music', 'game', 'netflix', 'spotify', 'concert', 'theater', 'show'],
@@ -53,7 +50,6 @@ CATEGORIES = {
     'home': ['furniture', 'decor', 'home', 'garden', 'DIY', 'renovation', 'interior']
 }
 
-# Demographic inference patterns
 AGE_PATTERNS = {
     '18-24': ['college', 'university', 'dorm', 'student', 'graduation', 'first job', 'tiktok', 'snapchat'],
     '25-34': ['career', 'apartment', 'dating', 'wedding', 'startup', 'linkedin', 'promotion'],
@@ -87,7 +83,6 @@ MARITAL_PATTERNS = {
     'widowed': ['widower', 'widow', 'late husband', 'late wife']
 }
 
-# Persona mappings from your existing PERSONAS
 PERSONA_MAPPINGS = {
     'outdoor_enthusiast': {'label': 'Outdoor Enthusiast', 'category': 'Active'},
     'home_cook': {'label': 'Home Cook', 'category': 'Creative'},
@@ -102,10 +97,7 @@ PERSONA_MAPPINGS = {
 }
 
 
-# ========== EXISTING SSE FUNCTIONALITY ==========
-
 def dispatcher_thread():
-    """Background thread that dispatches approved queries to SSE clients"""
     while True:
         wait = random.uniform(2, 5)
         time.sleep(wait)
@@ -122,16 +114,10 @@ def dispatcher_thread():
                 client_queue.put(event_data)
 
 
-# Start the background dispatcher
 thread = threading.Thread(target=dispatcher_thread, daemon=True)
 thread.start()
 
-
-# ========== PROFILE ANALYSIS CLASSES ==========
-
-class ProfileAnalyzer:
-    """Analyzes search history to create user profile"""
-    
+class ProfileAnalyzer:    
     def __init__(self, searches: List[Dict[str, Any]]):
         self.searches = searches
         self.queries = [s['query'].lower() for s in searches]
@@ -139,13 +125,7 @@ class ProfileAnalyzer:
 
     @staticmethod
     def _normalize_timestamp(ts) -> float:
-        """Convert a timestamp to a numeric epoch-ms value.
-        
-        Handles:
-          - int / float (already epoch-ms)
-          - ISO-8601 date strings (e.g. Google Takeout's 'time' field)
-          - Falls back to 0 on failure
-        """
+
         if isinstance(ts, (int, float)):
             return float(ts)
         if isinstance(ts, str):
@@ -158,7 +138,6 @@ class ProfileAnalyzer:
         return 0.0
         
     def analyze(self) -> Dict[str, Any]:
-        """Perform complete profile analysis"""
         profile = {
             'demographics': {
                 'age_range': self._infer_age(),
@@ -306,7 +285,6 @@ class ProfileAnalyzer:
 
 
 class ProfileComparator:
-    """Compares initial and updated profiles"""
     
     def __init__(self, initial_profile: Dict[str, Any], updated_profile: Dict[str, Any]):
         self.initial = initial_profile
@@ -414,7 +392,6 @@ def select_inverse_personas(profile: Dict[str, Any], count: int = 3) -> List[str
     """
     top_interests = profile.get('interests', {}).get('top_interests', [])
     
-    # Map interests to personas we should AVOID (because they match user)
     interest_to_persona = {
         'technology': 'tech_reader',
         'food': 'home_cook',
@@ -427,39 +404,27 @@ def select_inverse_personas(profile: Dict[str, Any], count: int = 3) -> List[str
         'entertainment': 'gamer'
     }
     
-    # Get personas to avoid (ones that match user's interests)
     avoid_personas = set()
     for interest in top_interests:
         if interest in interest_to_persona:
             avoid_personas.add(interest_to_persona[interest])
     
-    # All available personas
     all_persona_ids = list(PERSONA_MAPPINGS.keys())
     
-    # Select inverse personas (ones NOT in avoid list)
     inverse_personas = [p for p in all_persona_ids if p not in avoid_personas]
     
-    # If we filtered too many, add some back randomly
     if len(inverse_personas) < count:
         inverse_personas = all_persona_ids
     
-    # Randomly select the requested count
     selected = random.sample(inverse_personas, min(count, len(inverse_personas)))
-    
-    print(f"🎭 User interests: {top_interests}")
-    print(f"🚫 Avoiding personas: {avoid_personas}")
-    print(f"✅ Selected inverse personas: {selected}")
-    
+
     return selected
 
 
-# ========== API ENDPOINTS ==========
 
-# --- EXISTING ENDPOINTS ---
 
 @app.route("/api/recommendations", methods=["GET"])
 def get_recommendations():
-    """Your existing endpoint - uses PersonaSearchRecommender"""
     persona_id = request.args.get("persona_id")
     if not persona_id:
         return jsonify({"error": "Missing required query parameter: persona_id"}), 400
@@ -475,7 +440,6 @@ def get_recommendations():
 
 @app.route("/api/approve", methods=["POST"])
 def approve_queries():
-    """Your existing endpoint - approves queries for SSE dispatch"""
     data = request.get_json()
     if not data or "queries" not in data:
         return jsonify({"error": "Missing 'queries' in request body"}), 400
@@ -495,7 +459,6 @@ def approve_queries():
 
 @app.route("/api/stream", methods=["GET"])
 def stream():
-    """Your existing SSE endpoint"""
     client_queue = queue.Queue()
 
     with sse_clients_lock:
@@ -516,17 +479,13 @@ def stream():
     })
 
 
-# --- NEW ENDPOINTS (FIXED) ---
-
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
 
 @app.route('/api/analyze-profile', methods=['POST'])
 def analyze_profile():
-    """NEW: Analyze search history and generate profile"""
     try:
         data = request.json
         searches = data.get('searches', [])
@@ -539,21 +498,17 @@ def analyze_profile():
         analyzer = ProfileAnalyzer(searches)
         profile = analyzer.analyze()
         
-        print(f"✅ Profile generated! Top interests: {profile['interests']['top_interests']}")
+        print(f"Profile generated! Top interests: {profile['interests']['top_interests']}")
         
         return jsonify({'success': True, 'profile': profile})
         
     except Exception as e:
-        print(f"❌ Error in analyze_profile: {str(e)}")
+        print(f"Error in analyze_profile: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/generate-personas', methods=['POST'])
 def generate_personas():
-    """
-    NEW: Generate inverse personas based on profile
-    NOW USES YOUR PersonaSearchRecommender TO GENERATE REAL QUERIES! 🎉
-    """
     try:
         data = request.json
         profile = data.get('profile', {})
@@ -571,24 +526,21 @@ def generate_personas():
         for i, persona_id in enumerate(selected_persona_ids):
             print(f"  ⚙️  Generating queries for persona: {persona_id}")
             
-            # Use YOUR EXISTING PersonaSearchRecommender to generate queries!
             try:
                 queries = recommender.get_search_query_recommendations(persona_id)
-                print(f"  ✅ Generated {len(queries)} queries for {persona_id}")
+                print(f"Generated {len(queries)} queries for {persona_id}")
             except Exception as e:
-                print(f"  ⚠️  Error generating queries for {persona_id}: {e}")
+                print(f"Error generating queries for {persona_id}: {e}")
                 queries = []
             
-            # Get persona metadata
             persona_info = PERSONA_MAPPINGS.get(persona_id, {
                 'label': f'Persona {i+1}',
                 'category': 'General'
             })
             
-            # Build complete persona object
             persona = {
                 'id': f'persona_{i + 1}',
-                'persona_id': persona_id,  # The actual persona type
+                'persona_id': persona_id,
                 'title': persona_info['label'],
                 'description': f"Queries generated to obfuscate your profile with {persona_info['label'].lower()} interests",
                 'demographics': {
@@ -598,13 +550,13 @@ def generate_personas():
                     'marital_status': 'varied'
                 },
                 'interests': [persona_id],
-                'queries': queries,  # REAL QUERIES from your Ollama-powered recommender!
+                'queries': queries,
                 'category': persona_info['category'],
                 'created_at': datetime.now().isoformat()
             }
             personas.append(persona)
         
-        print(f"✅ Successfully generated {len(personas)} personas with queries!")
+        print(f"Successfully generated {len(personas)} personas with queries!")
         
         return jsonify({
             'success': True,
@@ -613,7 +565,7 @@ def generate_personas():
         })
         
     except Exception as e:
-        print(f"❌ Error in generate_personas: {str(e)}")
+        print(f"Error in generate_personas: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -621,7 +573,6 @@ def generate_personas():
 
 @app.route('/api/compare-profiles', methods=['POST'])
 def compare_profiles():
-    """NEW: Compare initial and updated profiles"""
     try:
         data = request.json
         initial_profile = data.get('initialProfile', {})
@@ -641,7 +592,6 @@ def compare_profiles():
 
 @app.route('/api/export-data', methods=['POST'])
 def export_data():
-    """NEW: Export all user data"""
     try:
         data = request.json
         export = {
@@ -660,7 +610,6 @@ def export_data():
 
 @app.route('/')
 def home():
-    """Welcome page - no more 404s!"""
     return jsonify({
         "message": "🛡️ Privacy Shield API",
         "status": "running",
@@ -678,10 +627,8 @@ def home():
 
 
 if __name__ == "__main__":
-    print("🛡️  Privacy Shield Backend Server (INTEGRATED + FIXED)")
     print("=" * 60)
     print("API available at: http://localhost:5001")
     print("=" * 60)
     
-    # threaded=True is required for SSE to work properly
     app.run(debug=True, threaded=True, host='0.0.0.0', port=5001)

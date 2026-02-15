@@ -2,7 +2,6 @@ import os
 import sys
 import json
 
-# Ensure sibling modules are importable regardless of cwd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from utils import query_ollama
@@ -25,14 +24,9 @@ class PersonaSearchRecommender:
 
     def __init__(self, model: str = "llama3.2"):
         self.model = model
-        # Build a lookup dict so we can find a persona by id quickly
         self._persona_map = {p["id"]: p for p in PERSONAS}
 
     def get_search_query_recommendations(self, persona_id: str) -> list[str]:
-        """
-        Given a persona id, returns a list of 10 Google search queries
-        that person would realistically make.
-        """
         persona = self._persona_map.get(persona_id)
         if persona is None:
             raise ValueError(
