@@ -1,38 +1,34 @@
-// personas.js — Persona definitions + Ollama query generation
-
 const OLLAMA_BASE  = "http://localhost:11434";
 const OLLAMA_MODEL = "llama3.2";
 
 const PERSONAS = [
-  { id: "outdoor_enthusiast", label: "Outdoor Enthusiast", emoji: "🏔", description: "hiking, camping, backpacking, trail running, climbing, national parks, gear reviews" },
-  { id: "home_cook",          label: "Home Cook",          emoji: "🍳", description: "recipes, cooking techniques, baking, food science, kitchen equipment, meal prep, restaurants" },
-  { id: "tech_reader",        label: "Tech Reader",        emoji: "💻", description: "gadgets, software, AI tools, programming tutorials, consumer electronics, tech news, apps" },
-  { id: "news_follower",      label: "News Follower",      emoji: "📰", description: "world news, politics, economics, investigative journalism, local news, opinion pieces" },
-  { id: "fitness_buff",       label: "Fitness & Wellness", emoji: "🏃", description: "workout routines, nutrition, running plans, yoga, supplements, weight training, recovery" },
-  { id: "diy_maker",          label: "DIY & Home",         emoji: "🔧", description: "home improvement, woodworking, plumbing, electrical, interior design, gardening, tools" },
-  { id: "finance_watcher",    label: "Personal Finance",   emoji: "📈", description: "investing, budgeting, retirement planning, index funds, credit cards, mortgages, taxes" },
-  { id: "travel_dreamer",     label: "Travel Planner",     emoji: "✈️", description: "travel destinations, hotels, flights, itineraries, travel tips, visas, packing lists" },
-  { id: "parent",             label: "Parent",             emoji: "👨‍👩‍👧", description: "parenting advice, child development, kids activities, school choices, family travel, toys" },
-  { id: "gamer",              label: "Gamer",              emoji: "🎮", description: "video game reviews, walkthroughs, gaming hardware, esports, indie games, game deals" }
+  { id: "outdoor_enthusiast", label: "Outdoor Enthusiast", description: "hiking, camping, backpacking, trail running, climbing, national parks, gear reviews" },
+  { id: "home_cook", label: "Home Cook", description: "recipes, cooking techniques, baking, food science, kitchen equipment, meal prep, restaurants" },
+  { id: "tech_reader", label: "Tech Reader", description: "gadgets, software, AI tools, programming tutorials, consumer electronics, tech news, apps" },
+  { id: "news_follower", label: "News Follower", description: "world news, politics, economics, investigative journalism, local news, opinion pieces" },
+  { id: "fitness_buff", label: "Fitness & Wellness", description: "workout routines, nutrition, running plans, yoga, supplements, weight training, recovery" },
+  { id: "diy_maker", label: "DIY & Home", description: "home improvement, woodworking, plumbing, electrical, interior design, gardening, tools" },
+  { id: "finance_watcher", label: "Personal Finance", description: "investing, budgeting, retirement planning, index funds, credit cards, mortgages, taxes" },
+  { id: "travel_dreamer", label: "Travel Planner", description: "travel destinations, hotels, flights, itineraries, travel tips, visas, packing lists" },
+  { id: "parent", label: "Parent", description: "parenting advice, child development, kids activities, school choices, family travel, toys" },
+  { id: "gamer", label: "Gamer", description: "video game reviews, walkthroughs, gaming hardware, esports, indie games, game deals" }
 ];
 
-// ── Check Ollama is running and model is available ─────────────────────────────
 async function checkOllama() {
   try {
     const res = await fetch(`${OLLAMA_BASE}/api/tags`, {
       signal: AbortSignal.timeout(3000)
     });
-    if (!res.ok) return { ok: false, error: "Ollama returned an error" };
+    if (!res.ok) return { ok: false};
     const data = await res.json();
     const models = data.models || [];
     const hasModel = models.some(m => m.name.startsWith("llama3.2"));
     return { ok: true, hasModel, models: models.map(m => m.name) };
   } catch (e) {
-    return { ok: false, error: "Ollama not running — start with: ollama serve" };
+    return { ok: false};
   }
 }
 
-// ── Generate search queries for a set of personas ─────────────────────────────
 async function generateQueries(personaIds, countPerPersona = 5) {
   const selected = PERSONAS.filter(p => personaIds.includes(p.id));
   if (selected.length === 0) throw new Error("No personas selected");
@@ -83,7 +79,6 @@ Generate ${totalCount} queries now:`;
   return parseQueries(data.response.trim());
 }
 
-// ── Parse query list from Ollama response ─────────────────────────────────────
 function parseQueries(raw) {
   try {
     const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -95,7 +90,7 @@ function parseQueries(raw) {
       .filter(q => typeof q === "string" && q.length > 3 && q.length < 100)
       .map(q => q.trim());
   } catch (e) {
-    console.warn("[BrowseGuard] Query parse failed:", e.message, "\nRaw:", raw);
+    console.warn("[blurB] Query parse failed:", e.message, "\nRaw:", raw);
     return [];
   }
 }
